@@ -17,6 +17,7 @@ note('--- register() with no resource');
 note('--- register() with invalid providers');
 
 note('--- trigger() to non-existent resource');
+note('--- trigger() nothing');
 
 note('--- cancel() undef selection');
 note('--- cancel() multiple times');
