@@ -97,14 +97,14 @@ sub _check {
    my ($self, $selection_id) = @_;
    my %results = ();
    my $fired = 0;
-   my $selection = $self->{$selection_id};
+   my $selection = $self->{selections}{$selection_id};
    return 0 if !defined($selection);
-   while(my ($res_key, $input) = each(%{$selection->{conditions}})) {
+   foreach my $res_key (keys %{$selection->{conditions}}) {
+       my $input = $selection->{conditions}{$res_key};
        if(!defined($self->{resources}{$res_key})) {
            $results{$res_key} = undef;
            next;
        }
-       ## How about condition input being coderef?? This is up to how resources are given.
        $results{$res_key} = $self->{resources}{$res_key}->($input);
        if(defined($results{$res_key})) {
            $fired = 1;
