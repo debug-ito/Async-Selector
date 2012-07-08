@@ -149,7 +149,7 @@ sub register {
    my ($self, %providers) = @_;
    my @error_keys = ();
    while(my ($key, $provider) = each(%providers)) {
-       if(ref($provider) ne 'CODE') {
+       if(!defined($provider) || !defined(ref($provider)) || ref($provider) ne 'CODE') {
            push(@error_keys, $key);
        }
    }
@@ -229,6 +229,9 @@ gets available via C<trigger()> method.
 
 sub select_et {
     my ($self, $cb, %conditions) = @_;
+    if(!defined($cb) || !defined(ref($cb)) || ref($cb) ne "CODE") {
+        croak "the select callback must be a coderef.";
+    }
     my $selection = {
         conditions => \%conditions,
         cb => $cb,
@@ -240,7 +243,8 @@ sub select_et {
 
 sub select_lt {
     my ($self, $cb, %conditions) = @_;
-    my $id = $self->select_et($cb, %conditions);
+    my $id;
+    $id = $self->select_et($cb, %conditions);
     $self->_check($id);
     return defined($self->{selections}{$id}) ? $id : undef;
 }
