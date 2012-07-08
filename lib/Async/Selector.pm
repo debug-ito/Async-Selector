@@ -157,7 +157,7 @@ sub register {
        croak("Providers must be coderef for keys: " . join(",", @error_keys));
        return;
    }
-   %{$self->{resources}}{keys %providers} = values %providers;
+   @{$self->{resources}}{keys %providers} = values %providers;
    return $self;
 }
 
@@ -244,7 +244,7 @@ sub select_lt {
     return defined($self->{selections}{$id}) ? $id : undef;
 }
 
-our *select = \&select_lt;
+*select = \&select_lt;
 
 
 =pod
