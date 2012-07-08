@@ -88,21 +88,107 @@ is((shift @result), $res_a, "... and it's $res_a");
     cmp_ok(int(@result), "==", 0, "no result because the selection is canceled.");
 }
 
-note("--- LT select, non-remove, immediate.");
-note("--- -- cancel() operation.");
+{
+    note("--- LT select, non-remove, immediate.");
+    @result = ();
+    $res_a = 20;
+    my $id = $s->select_lt(
+        sub {
+            my ($id, %res) = @_;
+            push(@result, $res{a});
+            return 0;
+        }, a => 1
+    );
+    foreach (1 .. 3) {
+        cmp_ok(int(@result), "==", 1, "got result immediately.");
+        is($result[0], $res_a, "... and it's $res_a");
+        @result = ();
+        $s->trigger('a');
+    }
+    @result = ();
+    note("--- -- cancel() operation.");
+    $s->cancel($id);
+    $s->trigger('a');
+    $s->trigger('a');
+    cmp_ok(int(@result), "==", 0, "got no result because selection is canceled.");
+}
 
-note("--- ET select, auto-remove, not immediate / immediate.");
+{
+    note("--- ET select, auto-remove, forcibly not immediate.");
+    @result = ();
+    $res_a = 5;
+    $s->select_et(
+        sub {
+            my ($id, %res) = @_;
+            push(@result, $res{a});
+            return 1;
+        }, a => 1
+    );
+    cmp_ok(int(@result), "==", 0, "got no result because it's edge-triggered.");
+    $s->trigger('a');
+    cmp_ok(int(@result), "==", 1, "got a result when triggerred.");
+    is($result[0], $res_a, "... and is $res_a");
+    @result = ();
+    $s->trigger('a');
+    cmp_ok(int(@result), "==", 0, "selection has been automatically removed.");
+}
 
-note("--- register() to update the provider.");
+{
+    note("--- ET select, non-remove, forcibly not immediate.");
+    @result = ();
+    $res_a = 0;
+    my $id = $s->select_et(
+        sub {
+            my ($id, %res) = @_;
+            push(@result, $res{a});
+            return 0;
+        }, a => 5
+    );
+    cmp_ok(int(@result), "==", 0, "got no result because it's edge-triggered.");
+    $res_a = 10;
+    $s->trigger('a');
+    cmp_ok(int(@result), "==", 1, "got a result");
+    is($result[0], $res_a, "... and is $res_a");
+    @result = ();
+    $s->trigger('a');
+    cmp_ok($result[0], "==", $res_a, "callback executed for every trigger, even if the resource is not changed actually.");
+    
+    $res_a = 0;
+    @result = ();
+    $s->trigger('a');
+    cmp_ok(int(@result), "==", 0, "If the resource is unavailable, it never calls the selection callback, even if the resource has changed.");
+
+    $s->cancel($id);
+}
+
+{
+    note("--- register() to update the provider.");
+    $s->register(
+        a => sub {
+            my ($in) = @_;
+            return $res_a >= $in ? -$res_a : undef;
+        }
+    );
+    @result = ();
+    $res_a = 0;
+    $s->select(
+        sub {
+            my ($id, %res) = @_;
+            push(@result, $res{a});
+            return 1;
+        }, a => 5
+    );
+    foreach (1 .. 10) {
+        $res_a++;
+        $s->trigger('a');
+    }
+    cmp_ok(int(@result), "==", 1, "got 1 result.");
+    cmp_ok($result[0], "==", -5, "... and it's -5");
+}
 
 note("--- unregister()");
 is($s->unregister('a'), $s, "unregister() returns the object.");
 cmp_ok(int($s->resources), '==', 0, "now no resource is registered.");
 
 done_testing();
-
-
-
-
-
 
