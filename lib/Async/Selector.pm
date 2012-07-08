@@ -111,7 +111,7 @@ sub _check {
        }
    }
    return 0 if !$fired;
-   if($selection->{cb}->(%results)) {
+   if($selection->{cb}->($selection_id, %results)) {
        $self->cancel($selection_id);
    }
    return 1;
@@ -183,14 +183,15 @@ sub unregister {
 
 =pod
 
-=head2 $selection_id = $selector->select($callback->(%resources), $name => $condition_input, ...);
+=head2 $selection_id = $selector->select($callback->($selection_id, %resources), $name => $condition_input, ...);
 
 Selects resources.
 A resource selection is described as a pair of resource name and condition input for the resource.
 You can select as many resources as you like.
 
 C<$callback> is a subroutine reference that is executed when any of the selected resources gets available.
-Its argument (C<%resources>) is a hash whose key is the resource name and value is the resource data.
+Its first argument C<$selection_id> is the ID for this selection. It is the same value as the ID returned from C<select()> method.
+The other argument (C<%resources>) is a hash whose key is the resource name and value is the resource data.
 Note that some values in C<%resources> can be C<undef>, meaning that those resources are not available.
 Note also that C<$callback> is executed before C<select()> method returns
 if some of the selected resources is already available.
