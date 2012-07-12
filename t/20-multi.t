@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use Test::More;
 use Test::Builder;
+use List::Util qw(first);
 
 package Sample::Resources;
 use strict;
@@ -54,9 +55,17 @@ sub checkResult {
     my ($result_ref, @exp_list) = @_;
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     cmp_ok(int(@$result_ref), "==", int(@exp_list), sprintf("result num == %d", int(@exp_list)));
+    my @result = @$result_ref;
     foreach my $exp_str (@exp_list) {
-        ok((grep { $_ eq $exp_str } @$result_ref), "result includes $exp_str");
+        my $found_index = first { $result[$_] eq $exp_str } 0..$#result;
+        ok(defined($found_index), "result includes $exp_str");
+        my @new_result = ();
+        foreach my $i (0 .. $#result) {
+            push @new_result, $result[$i] if $i != $found_index;
+        }
+        @result = @new_result;
     }
+    cmp_ok(int(@result), "==", 0, "checked all results.");
 }
 
 note('Test for N-resource M-selection.');
@@ -123,12 +132,98 @@ note('Test for N-resource M-selection.');
 
 {
     note('--- 1-resource, M-selections');
+    my $s = new_ok('Async::Selector');
+    my $rs = Sample::Resources->new($s, 1);
+    my @result = ();
+    note('--- -- non-remove selections');
+    my @ids = ();
+    push @ids, $s->select(collector(\@result, 0), 1 => 1);
+    push @ids, $s->select(collector(\@result, 0), 1 => 2);
+    checkResult \@result;
+    $rs->set(1 => "A");
+    checkResult \@result, qw(1:A);
+    @result = ();
+    $rs->set(1 => "BB");
+    checkResult \@result, qw(1:BB 1:BB);
+    @result = ();
+    $rs->set(1 => 'a');
+    checkResult \@result, qw(1:a);
+    $s->cancel(@ids);
+    @result = ();
+    $rs->set(1 => 'abcde');
+    checkResult \@result;
+
+    note('--- -- auto-remove selections');
+    @result = ();
+    $s->select(collector(\@result, 1), 1 => 4);
+    checkResult \@result, qw(1:abcde);
+    $s->select(collector(\@result, 1), 1 => 6);
+    checkResult \@result, qw(1:abcde);
+    $s->select(collector(\@result, 1), 1 => 7);
+    checkResult \@result, qw(1:abcde);
+    $s->select(collector(\@result, 1), 1 => 3);
+    checkResult \@result, qw(1:abcde 1:abcde);
+    $s->select(collector(\@result, 1), 1 => 8);
+    checkResult \@result, qw(1:abcde 1:abcde);
+    $s->select(collector(\@result, 1), 1 => 9);
+    checkResult \@result, qw(1:abcde 1:abcde);
+    @result = ();
+    $rs->set(1 => "666666");
+    checkResult \@result, "1:666666";
+    $rs->set(1 => "7777777");
+    checkResult \@result, qw(1:666666 1:7777777);
+    $rs->set(1 => "88888888");
+    checkResult \@result, qw(1:666666 1:7777777 1:88888888);
+    $rs->set(1 => "999999999");
+    checkResult \@result, qw(1:666666 1:7777777 1:88888888 1:999999999);
+    @result = ();
+    foreach my $num (10 .. 15) {
+        $rs->set(1 => "A" x $num);
+        checkResult \@result;
+    }
+    
     note('--- -- mix auto-remove and non-remove selections');
+    $rs->set(1 => "");
+    @result = ();
+    @ids = ();
+    push @ids, $s->select(collector(\@result, 0), 1 => 5);
+    $s->select(collector(\@result, 1), 1 => 6);
+    push @ids, $s->select(collector(\@result, 0), 1 => 7);
+    $s->select(collector(\@result, 1), 1 => 8);
+    checkResult \@result;
+    @result = ();
+    $rs->set(1 => "qqqq");
+    checkResult \@result;
+    @result = ();
+    $rs->set(1 => "wwwww");
+    checkResult \@result, "1:wwwww";
+    @result = ();
+    $rs->set(1 => "eeeeee");
+    checkResult \@result, qw(1:eeeeee 1:eeeeee);
+    @result = ();
+    $rs->set(1 => "rrrrrrr");
+    checkResult \@result, qw(1:rrrrrrr 1:rrrrrrr);
+    @result = ();
+    $rs->set(1 => "tttttttt");
+    checkResult \@result, qw(1:tttttttt 1:tttttttt 1:tttttttt);
+    foreach my $num (9 .. 12) {
+        @result = ();
+        $rs->set(1 => ("A" x $num));
+        checkResult \@result, ('1:' . ("A" x $num)) x 2;
+    }
+    $s->cancel(@ids);
+    foreach my $i (1 .. 3) {
+        @result = ();
+        $rs->set(1 => "PPPPPPPPPPPPPP");
+        checkResult \@result;
+    }
+    
     note('--- -- cancel() some of the selections');
 }
 
 {
     note('--- N-resource, M-selections');
+    ## casual checking will do. what's more important is exceptional cases.
 }
 
 done_testing();
