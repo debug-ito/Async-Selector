@@ -219,11 +219,42 @@ note('Test for N-resource M-selection.');
     }
     
     note('--- -- cancel() some of the selections');
+    $rs->set(1 => "a");
+    @ids = ();
+    @result = ();
+    push @ids, $s->select(collector(\@result, 0), 1 => $_) foreach 1 .. 10;
+    checkResult \@result, "1:a";
+    @result = ();
+    $s->cancel(@ids[2, 4, 5, 8]); ## 1 2 4 7 8 10
+    $rs->set(1 => "bbbbbb");
+    checkResult(\@result, ("1:bbbbbb") x 3);
 }
 
 {
     note('--- N-resource, M-selections');
     ## casual checking will do. what's more important is exceptional cases.
+    my $s = new_ok('Async::Selector');
+    my $rs = Sample::Resources->new($s, 1 .. 5);
+    my @result = ();
+    $s->select(collector(\@result, 1), 1 => 5, 2 => 5, 3 => 5);
+    $s->select(collector(\@result, 1),         2 => 4, 3 => 4, 4 => 4);
+    $s->select(collector(\@result, 1), 1 => 5,                 4 => 5, 5 => 5);
+    $s->select(collector(\@result, 1),         2 => 0, 3 => 0, 4 => 3, 5 => 5);
+    $s->select(collector(\@result, 1), 1 => 2,                 4 => 5, 5 => 2);
+    $s->select(collector(\@result, 1),         2 => 4, 3 => 4);
+    checkResult \@result, qw(2: 3:);
+    @result = ();
+    $rs->set(1 => "aa", 5 => "aa");
+    checkResult \@result, qw(1:aa 5:aa);
+    @result = ();
+    $rs->set(3 => "AAAA", 4 => "AAAA");
+    checkResult \@result, qw(3:AAAA 3:AAAA 4:AAAA);
+    @result = ();
+    $rs->set(map {$_ => "bbbbbb"} 1 .. 5);
+    checkResult \@result, qw(1:bbbbbb 2:bbbbbb 3:bbbbbb 1:bbbbbb 4:bbbbbb 5:bbbbbb);
+    @result = ();
+    $rs->set(map {$_ => "cccccccccccc"} 1 .. 5);
+    checkResult \@result;
 }
 
 done_testing();
