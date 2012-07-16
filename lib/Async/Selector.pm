@@ -331,6 +331,13 @@ sub selections {
 }
 
 
+=pod
+
+=head1 SEE ALSO
+
+L<Event::Notify>, L<Notification::Center>
+
+
 =head1 AUTHOR
 
 Toshio Ito, C<< <debug.ito at gmail.com> >>
