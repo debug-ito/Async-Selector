@@ -221,7 +221,7 @@ C<select_lt()> method is an alias for C<select()> method.
 This method is just like C<select()> method but it emulates edge-triggered selection.
 
 To emulate edge-triggered behavior, C<select_et()> won't execute
-the C<$callback> before it returns.
+the C<$callback> at the time of selection.
 The C<$callback> is executed only when some of the selected resources
 gets available via C<trigger()> method.
 
