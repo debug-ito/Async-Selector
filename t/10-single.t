@@ -72,6 +72,11 @@ is((shift @result), $res_a, "... and it's $res_a");
         }, a => 10
     );
     ok(defined($id), "select() method returns defined ID");
+    {
+        my @selections = $s->selections;
+        is(int(@selections), 1, "Currently 1 selection.");
+        is($selections[0], $id, "... and it's $id.");
+    }
     $res_a = 9; $s->trigger('a');
     cmp_ok(int(@result), "==", 0, "no result.");
     $res_a = 10; $s->trigger('a');
@@ -86,6 +91,7 @@ is((shift @result), $res_a, "... and it's $res_a");
     is($s->cancel($id), $s, "cancel() returns the object.");
     $s->trigger('a') foreach 1..3;
     cmp_ok(int(@result), "==", 0, "no result because the selection is canceled.");
+    is(int($s->selections), 0, "no selections");
 }
 
 {
@@ -99,6 +105,8 @@ is((shift @result), $res_a, "... and it's $res_a");
             return 0;
         }, a => 1
     );
+    is(int($s->selections), 1, "One selection");
+    is(($s->selections)[0], $id, "... and it's $id.");
     foreach (1 .. 3) {
         cmp_ok(int(@result), "==", 1, "got result immediately.");
         is($result[0], $res_a, "... and it's $res_a");
@@ -108,6 +116,7 @@ is((shift @result), $res_a, "... and it's $res_a");
     @result = ();
     note("--- -- cancel() operation.");
     $s->cancel($id);
+    is(int($s->selections), 0, "No selection");
     $s->trigger('a');
     $s->trigger('a');
     cmp_ok(int(@result), "==", 0, "got no result because selection is canceled.");
@@ -117,13 +126,15 @@ is((shift @result), $res_a, "... and it's $res_a");
     note("--- ET select, auto-remove, forcibly not immediate.");
     @result = ();
     $res_a = 5;
-    $s->select_et(
+    my $id = $s->select_et(
         sub {
             my ($id, %res) = @_;
             push(@result, $res{a});
             return 1;
         }, a => 1
     );
+    is(int($s->selections), 1, "One selection");
+    is(($s->selections)[0], $id, "... and it's $id.");
     cmp_ok(int(@result), "==", 0, "got no result because it's edge-triggered.");
     $s->trigger('a');
     cmp_ok(int(@result), "==", 1, "got a result when triggerred.");

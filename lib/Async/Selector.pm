@@ -317,6 +317,20 @@ sub resources {
 }
 
 
+=pod
+
+=head2 @selection_ids = $selector->selections();
+
+Returns the list of currently active selection IDs.
+
+=cut
+
+sub selections {
+    my ($self) = @_;
+    return keys %{$self->{selections}};
+}
+
+
 =head1 AUTHOR
 
 Toshio Ito, C<< <debug.ito at gmail.com> >>
