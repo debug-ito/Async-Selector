@@ -32,6 +32,6 @@ $resource .= "data";  ## 14 bytes
 $selector->trigger('resource_A'); ## Nothing happens
 
 $resource .= "more data";  ## 23 bytes
-$selector->trigger('resource_A'); ## The callback prings 'some text.datamore data'
+$selector->trigger('resource_A'); ## The callback prints 'some text.datamore data'
 
 
