@@ -20,7 +20,6 @@ no_index:
   directory:
     - t
     - inc
-    - eg
 requires:
   Carp: 0
 version: 0.01
