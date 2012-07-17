@@ -20,7 +20,7 @@ WriteMakefile(
         'List::Util' => 0,
         'Test::Warn' => 0,
         'Test::Exception' => 0,
-    }
+    },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Async-Selector-*' },
 );
