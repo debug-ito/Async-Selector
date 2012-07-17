@@ -47,7 +47,48 @@ use Async::Selector;
 print "==============\n";
 
 {
-    ## Auto-remove and non-remove selections
-    ;
+    ## Auto-cancel and non-cancel selections
+    my $selector = Async::Selector->new();
+    my $A = "";
+    my $B = "";
+    $selector->register(
+        A => sub { my $in = shift; return length($A) >= $in ? $A : undef },
+        B => sub { my $in = shift; return length($B) >= $in ? $B : undef },
+    );
+
+    my $sel_a = $selector->select(
+        sub {
+            my ($id, %res) = @_;
+            print "A: $res{A}\n";
+            return 1; ## auto-cancel
+        },
+        A => 5
+    );
+    my $sel_b = $selector->select(
+        sub {
+            my ($id, %res) = @_;
+            print "B: $res{B}\n";
+            return 0; ## non-cancel
+        },
+        B => 5
+    );
+
+    ## Trigger the resources.
+    ## Execution order of selection callbacks is not guaranteed.
+    ($A, $B) = ('aaaaa', 'bbbbb');
+    $selector->trigger('A', 'B');   ## -> B: bbbbb
+                                    ## -> A: aaaaa
+    print "--------\n";
+    ## $sel_a is automatically canceled.
+    ($A, $B) = ('AAAAA', 'BBBBB');
+    $selector->trigger('A', 'B');   ## -> B: BBBBB
+    print "--------\n";
+
+    $B = "CCCCCCC";
+    $selector->trigger('A', 'B');        ## -> B: CCCCCCC
+    print "--------\n";
+
+    $selector->cancel($sel_b);
+    $selector->trigger('A', 'B');        ## Nothing happens.
 }
 
