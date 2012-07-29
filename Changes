@@ -1,5 +1,16 @@
 Revision history for Async-Selector
 
+0.02    2012/07/29
+        Modify the behavior of select() method with no resource selection.
+        Before: It accepts the (no) selection without warning.
+        After : It ignores (rejects) the selection without warning.
+
+        Because a selection without selected resource will never be
+        removed except that the user explicitly cancel() it, it easily
+        causes memory leak. To avoid this danger, selection with no resource
+        is explicitly rejected. In this case, select() returns undef.
+        
+
 0.01    2012/07/17
         First version.
 
