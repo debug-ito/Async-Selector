@@ -79,10 +79,18 @@ sub checkRNum {
     note('--- select() with no resource');
     my $s = new_ok('Async::Selector');
     my $id = undef;
-    warning_is {$id = $s->select(sub { return 1 })} undef, "Selecting no resource is no problem, but useless.";
-    ok(defined($id), "Got ID for selection for no resource");
-    checkSNum $s, 1;
-    warning_is {$s->cancel($id)} undef, "Cancel the useless selection without warning.";
+    my @result = ();
+    warning_is {$id = $s->select(sub { push(@result, 'token'); return 0 })}
+        undef, "select() finishes with no warning even if it is supplied with no resource selection.";
+    ok(!defined($id), "... it returns no selection ID. selection is silently rejected.");
+    is(int(@result), 0, "... callback is not executed, because the selection is rejected.");
+    checkSNum $s, 0;
+
+    @result = ();
+    warning_is {$id = $s->select_et(sub { push(@result, 'token'); return 0 })}
+        undef, "The behavior is the same for select_et().";
+    ok(!defined($id), "... it returns no selection ID.");
+    is(int(@result), 0, "... callback is not executed, because the selection is rejected.");
     checkSNum $s, 0;
 }
 

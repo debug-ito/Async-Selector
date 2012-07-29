@@ -16,11 +16,11 @@ Async::Selector - level-triggered resource observer like select(2)
 
 =head1 VERSION
 
-0.01
+0.02
 
 =cut
 
-our $VERSION = "0.01";
+our $VERSION = "0.02";
 
 
 =pod
@@ -240,6 +240,10 @@ which can be used to cancel the selection in C<cancel()> method.
 If C<$callback> is executed before C<select()> returns and C<$callback> returns true,
 C<select()> returns C<undef> because the selection is already removed.
 
+If no resource selection (C<$name> => C<$condition_input> pair) is specified,
+C<select()> method silently ignores it.
+As a result, it returns C<undef> and the C<$callback> is never executed.
+
 
 =head2 $selection_id = $selector->select_lt(...);
 
@@ -262,6 +266,9 @@ sub select_et {
     if(!defined($cb) || !defined(ref($cb)) || ref($cb) ne "CODE") {
         croak "the select callback must be a coderef.";
     }
+    if(!%conditions) {
+        return undef;
+    }
     my $selection = {
         conditions => \%conditions,
         cb => $cb,
@@ -275,6 +282,7 @@ sub select_lt {
     my ($self, $cb, %conditions) = @_;
     my $id;
     $id = $self->select_et($cb, %conditions);
+    return undef if not defined($id);
     $self->_check($id);
     return defined($self->{selections}{$id}) ? $id : undef;
 }
