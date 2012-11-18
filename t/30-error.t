@@ -38,8 +38,10 @@ sub checkRNum {
     my $result = "";
     warning_is { $s->select(unknown => 100, catter(\$result, 1)) } undef, "No warning for selecting non-existent resource.";
     checkSNum $s, 1;
-    warning_is { $s->select(res => 1, unknown => 20, sub { return 1 }) } undef, "... neither when existent resource is selected as well.";
+    warning_is { $s->select(res => 1, unknown => 20, catter(\$result, 1)) } undef, "... neither when existent resource is selected as well.";
     checkSNum $s, 1;
+    is($result, "res:RES", "existent resource is provided as usual.");
+    $result = "";
     $s->register("unknown" => sub { return 10 });
     is($result, "", "The result is empty");
     $s->trigger("unknown");
