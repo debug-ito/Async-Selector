@@ -269,14 +269,13 @@ sub select_et {
     my (%conditions, $cb);
     if(ref($_[0]) eq 'CODE') {
         $cb = shift;
-        %conditions = @_;
     }else {
         $cb = pop;
-        %conditions = @_;
     }
     if(!defined($cb) || !defined(ref($cb)) || ref($cb) ne "CODE") {
         croak "the select callback must be a coderef.";
     }
+    %conditions = @_;
     if(!%conditions) {
         return undef;
     }
@@ -340,7 +339,7 @@ sub trigger {
    selec_loop: foreach my $selection (values %{$self->{selections}}) {
        foreach my $res (@resources) {
            next if !defined($res);
-           if(defined($selection->{conditions}{$res})) {
+           if(exists($selection->{conditions}{$res})) {
                push(@affected_selections, $selection);
                next selec_loop;
            }
