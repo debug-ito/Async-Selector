@@ -97,6 +97,29 @@ sub checkRNum {
 }
 
 {
+    note('--- select() without callback');
+    my $s = new_ok('Async::Selector');
+    throws_ok { $s->select(a => 10, b => 20) }
+        qr/must be a coderef/i, 'Throw exception when select() is called without callback';
+    throws_ok { $s->select() }
+        qr/must be a coderef/i, 'Throw exception when select() is called without any argument';
+    note('--- -- what if condition input is a coderef?');
+    warning_like { $s->select(a => sub {10}) }
+        qr(odd number)i, 'Warning from warning pragma when select() is called without callback but condition input is a coderef';
+    my $fired = 0;
+    $s->register(a => sub {
+        my ($in) = @_;
+        $fired = 1;
+        ok(!defined($in), "condition input is undef.");
+        return 1;
+    });
+    is(int($s->selections), 1, "selection is alive");
+    $s->trigger('a');
+    is($fired, 1, "selection fired.");
+    is(int($s->selections), 0, "currently no selection.");
+}
+
+{
     note('--- unregister() non-existent resource');
     my $s = new_ok('Async::Selector');
     $s->register(res => sub { return 'FOOBAR'});
