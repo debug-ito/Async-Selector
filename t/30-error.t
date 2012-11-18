@@ -36,9 +36,9 @@ sub checkRNum {
     $s->register("res" => sub { my $in = shift; return $in ? "RES" : undef });
     checkSNum $s, 0;
     my $result = "";
-    warning_is { $s->select(catter(\$result, 1), unknown => 100) } undef, "No warning for selecting non-existent resource.";
+    warning_is { $s->select(unknown => 100, catter(\$result, 1)) } undef, "No warning for selecting non-existent resource.";
     checkSNum $s, 1;
-    warning_is { $s->select(sub { return 1 }, res => 1, unknown => 20) } undef, "... neither when existent resource is selected as well.";
+    warning_is { $s->select(res => 1, unknown => 20, sub { return 1 }) } undef, "... neither when existent resource is selected as well.";
     checkSNum $s, 1;
     $s->register("unknown" => sub { return 10 });
     is($result, "", "The result is empty");
@@ -52,7 +52,7 @@ sub checkRNum {
     my $s = new_ok('Async::Selector');
     my $result = "";
     checkSNum $s, 0;
-    warning_like {$s->select(catter(\$result, 1), undef, 100, res => 200)}
+    warning_like {$s->select(undef, 100, res => 200, catter(\$result, 1))}
         qr/uninitialized/i, "Selecting undef is treated as selecting a resource named empty string.";
     checkSNum $s, 1;
     $s->register(res => sub { return "RES" }, "" => sub { return "EMPTY" });
@@ -68,10 +68,10 @@ sub checkRNum {
     note('--- select() with invalid callback');
     my $s = new_ok('Async::Selector');
     my $msg = qr/must be a coderef/i;
-    throws_ok {$s->select(undef, res => 100)} $msg, "callback must not be undef";
-    throws_ok {$s->select("string", res => 100)} $msg, "... or a string";
-    throws_ok {$s->select([1, 2, 10], res => 100)} $msg, "... or an arrayref";
-    throws_ok {$s->select({hoge => "foo"})} $msg, "... or a hashref.";
+    throws_ok {$s->select(res => 100, undef)} $msg, "callback must not be undef";
+    throws_ok {$s->select(res => 100, "string")} $msg, "... or a string";
+    throws_ok {$s->select(res => 100, [1, 2, 10])} $msg, "... or an arrayref";
+    throws_ok {$s->select(res => 100, {hoge => "foo"})} $msg, "... or a hashref.";
     checkSNum $s, 0;
 }
 
@@ -131,8 +131,8 @@ sub checkRNum {
     $s->register('res' => sub { my $in = shift; return $res >= $in ? $res : undef });
     my $result = "";
     my @ids = ();
-    push @ids, $s->select(catter(\$result, 0), 'res' => 5);
-    push @ids, $s->select(catter(\$result, 1), 'res' => 10);
+    push @ids, $s->select('res' => 5, catter(\$result, 0));
+    push @ids, $s->select('res' => 10, catter(\$result, 1));
     checkSNum $s, 2;
     warning_is { $s->unregister('res') } undef, "unregister() does not warn even when the deleted resource is now selected.";
     checkSNum $s, 2;
@@ -160,7 +160,7 @@ sub checkRNum {
     is(($s->resources)[0], "", "Empty named resource");
     my $result = "";
     checkSNum $s, 0;
-    $s->select(catter(\$result, 1), '', 10);
+    $s->select('', 10, catter(\$result, 1));
     is($result, ":10", "Get result from a selection");
     checkSNum $s, 0;
 }
@@ -180,7 +180,7 @@ sub checkRNum {
     note('--- trigger() to non-existent resource');
     my $s = new_ok('Async::Selector');
     warning_is { $s->trigger(qw(this does not exist)) } undef, "trigger() non-existent resources is OK. Just ignored.";
-    $s->select(sub { warn "Callback fired."; return 0 }, want => 10);
+    $s->select(want => 10, sub { warn "Callback fired."; return 0 });
     checkSNum $s, 1;
     warning_is { $s->trigger(qw(that does not here)) } undef, "trigger() non-selected resource does not fire selection.";
     
@@ -192,7 +192,7 @@ sub checkRNum {
     note('--- cancel() undef selection');
     my $s = new_ok('Async::Selector');
     warning_is { $s->cancel(undef, undef, undef) } undef, "cancel(undef) is OK.";
-    my $id = $s->select(sub { warn "Callback fired."; return 1 }, want => 10);
+    my $id = $s->select(want => 10, sub { warn "Callback fired."; return 1 });
     checkSNum $s, 1;
     is(($s->selections)[0], $id, "selection ID is $id.");
     warning_is { $s->cancel(undef) } undef, "cancel(undef) does nothing.";

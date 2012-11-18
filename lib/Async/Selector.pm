@@ -16,16 +16,17 @@ Async::Selector - level-triggered resource observer like select(2)
 
 =head1 VERSION
 
-0.02
+0.05
 
 =cut
 
-our $VERSION = "0.02";
+our $VERSION = "0.05";
 
 
 =pod
 
 =head1 SYNOPSIS
+
 
     use Async::Selector;
     
@@ -33,22 +34,21 @@ our $VERSION = "0.02";
     
     ## Register resource
     my $resource = "some text.";  ## 10 bytes
-    $selector->register(
-        resource_A => sub {
-            my $threshold = shift;
-            return length($resource) >= $threshold ? $resource : undef;
-        }
-    );
+    
+    $selector->register(resource_A => sub {
+        my $threshold = shift;
+        return length($resource) >= $threshold ? $resource : undef;
+    });
     
     
     ## Select the resource with a callback.
     $selector->select(
+        resource_A => 20,  ## Tell me when the resource gets more than 20 bytes!
         sub {
             my ($id, %resource) = @_;
             print "$resource{resource_A}\n";
             return 1;
-        },
-        resource_A => 20,  ## Tell me when the resource gets more than 20 bytes!
+        }
     );
     
     
@@ -58,6 +58,7 @@ our $VERSION = "0.02";
     
     $resource .= "more data";  ## 23 bytes
     $selector->trigger('resource_A'); ## The callback prints 'some text.datamore data'
+
 
 
 =head1 DESCRIPTION
@@ -213,11 +214,18 @@ sub unregister {
 
 =pod
 
-=head2 $selection_id = $selector->select($callback->($selection_id, %resources), $name => $condition_input, ...);
+=head2 $selection_id = $selector->select($name => $condition_input, ..., $callback->($selection_id, %resources));
 
 Selects resources.
 A resource selection is described as a pair of resource name and condition input for the resource.
 You can select as many resources as you like.
+
+C<$name> is the resource name that you want to select. It is the name given in C<register()> method.
+
+C<$condition_input> describes the condition the resource has to meet to be considered as "available".
+C<$condition_input> is an arbitrary scalar, and it's interpretation is up to the resource provider.
+
+You can list as many C<< $name => condition_input >> pairs as you like.
 
 C<$callback> is a subroutine reference that is executed when any of the selected resources gets available.
 Its first argument C<$selection_id> is the ID for this selection. It is the same value as the ID returned from C<select()> method.
@@ -229,11 +237,6 @@ if some of the selected resources is already available.
 C<$callback> is supposed to return a boolean value.
 If the return value is true, the selection is automatically canceled after the execution of C<$callback>.
 If the return value is false, the selection remains.
-
-C<$name> is the resource name that you want to select. It is the name given in C<register()> method.
-
-C<$condition_input> describes the condition the resource has to meet to be considered as "available".
-C<$condition_input> is an arbitrary scalar, and it's interpretation is up to the resource provider.
 
 C<select()> method returns an ID for the selection (C<$selection_id>),
 which can be used to cancel the selection in C<cancel()> method.
@@ -262,7 +265,15 @@ gets available via C<trigger()> method.
 =cut
 
 sub select_et {
-    my ($self, $cb, %conditions) = @_;
+    my $self = shift;
+    my (%conditions, $cb);
+    if(ref($_[0]) eq 'CODE') {
+        $cb = shift;
+        %conditions = @_;
+    }else {
+        $cb = pop;
+        %conditions = @_;
+    }
     if(!defined($cb) || !defined(ref($cb)) || ref($cb) ne "CODE") {
         croak "the select callback must be a coderef.";
     }
@@ -279,9 +290,9 @@ sub select_et {
 }
 
 sub select_lt {
-    my ($self, $cb, %conditions) = @_;
+    my ($self, @args) = @_;
     my $id;
-    $id = $self->select_et($cb, %conditions);
+    $id = $self->select_et(@args);
     return undef if not defined($id);
     $self->_check($id);
     return defined($self->{selections}{$id}) ? $id : undef;
@@ -375,6 +386,12 @@ sub selections {
 
 =head2 Multiple resources, multiple selections
 
+You can register multiple resources with a single L<Async::Selector>
+object.  You can select multiple resources with a single call of
+C<select()> method.  If you select multiple resources, the callback is
+executed when any of the selected resources is available.
+
+
     my $selector = Async::Selector->new();
     my $a = 5;
     my $b = 6;
@@ -384,15 +401,13 @@ sub selections {
         b => sub { my $t = shift; return $b >= $t ? $b : undef },
         c => sub { my $t = shift; return $c >= $t ? $c : undef },
     );
+    $selector->select(a => 10, sub {
+        my ($id, %res) = @_;
+        print "Select 1: a is $res{a}\n";
+        return 1;
+    });
     $selector->select(
-        sub {
-            my ($id, %res) = @_;
-            print "Select 1: a is $res{a}\n";
-            return 1;
-        },
-        a => 10
-    );
-    $selector->select(
+        a => 12, b => 15, c => 15,
         sub {
             my ($id, %res) = @_;
             foreach my $key (sort keys %res) {
@@ -400,10 +415,9 @@ sub selections {
                 print "Select 2: $key is $res{$key}\n";
             }
             return 1;
-        },
-        a => 12, b => 15, c => 15,
+        }
     );
-
+    
     ($a, $b, $c) = (11, 14, 14);
     $selector->trigger(qw(a b c));  ## -> Select 1: a is 11
     print "---------\n";
@@ -412,7 +426,13 @@ sub selections {
                                     ## -> Select 2: c is 20
 
 
+
 =head2 Auto-cancel and non-cancel selections
+
+In the callback function for C<select()> method, the selection is
+automatically canceled from the L<Async::Selector> object if you
+return true.  The selection remains in the L<Async::Selector> object
+if you return false.
 
 
     my $selector = Async::Selector->new();
@@ -422,24 +442,18 @@ sub selections {
         A => sub { my $in = shift; return length($A) >= $in ? $A : undef },
         B => sub { my $in = shift; return length($B) >= $in ? $B : undef },
     );
-
-    my $sel_a = $selector->select(
-        sub {
-            my ($id, %res) = @_;
-            print "A: $res{A}\n";
-            return 1; ## auto-cancel
-        },
-        A => 5
-    );
-    my $sel_b = $selector->select(
-        sub {
-            my ($id, %res) = @_;
-            print "B: $res{B}\n";
-            return 0; ## non-cancel
-        },
-        B => 5
-    );
-
+    
+    my $sel_a = $selector->select(A => 5, sub {
+        my ($id, %res) = @_;
+        print "A: $res{A}\n";
+        return 1; ## auto-cancel
+    });
+    my $sel_b = $selector->select(B => 5, sub {
+        my ($id, %res) = @_;
+        print "B: $res{B}\n";
+        return 0; ## non-cancel
+    });
+    
     ## Trigger the resources.
     ## Execution order of selection callbacks is not guaranteed.
     ($A, $B) = ('aaaaa', 'bbbbb');
@@ -450,14 +464,24 @@ sub selections {
     ($A, $B) = ('AAAAA', 'BBBBB');
     $selector->trigger('A', 'B');   ## -> B: BBBBB
     print "--------\n";
-
+    
     $B = "CCCCCCC";
     $selector->trigger('A', 'B');        ## -> B: CCCCCCC
     print "--------\n";
-
+    
     $selector->cancel($sel_b);
     $selector->trigger('A', 'B');        ## Nothing happens.
 
+
+
+
+=head2 Real-time Web: Comet (long-polling) and WebSocket
+
+L<Async::Selector> can be used for foundation of so-called real-time
+Web.  Resource registered with an L<Async::Selector> object can be
+pushed to Web browsers via Comet (long-polling) and/or WebSocket.
+
+See L<Async::Selector::Example::Mojo> for detail.
 
 
 =head1 SEE ALSO

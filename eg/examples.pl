@@ -16,15 +16,13 @@ use Async::Selector;
         b => sub { my $t = shift; return $b >= $t ? $b : undef },
         c => sub { my $t = shift; return $c >= $t ? $c : undef },
     );
+    $selector->select(a => 10, sub {
+        my ($id, %res) = @_;
+        print "Select 1: a is $res{a}\n";
+        return 1;
+    });
     $selector->select(
-        sub {
-            my ($id, %res) = @_;
-            print "Select 1: a is $res{a}\n";
-            return 1;
-        },
-        a => 10
-    );
-    $selector->select(
+        a => 12, b => 15, c => 15,
         sub {
             my ($id, %res) = @_;
             foreach my $key (sort keys %res) {
@@ -32,8 +30,7 @@ use Async::Selector;
                 print "Select 2: $key is $res{$key}\n";
             }
             return 1;
-        },
-        a => 12, b => 15, c => 15,
+        }
     );
 
     ($a, $b, $c) = (11, 14, 14);
@@ -56,22 +53,16 @@ print "==============\n";
         B => sub { my $in = shift; return length($B) >= $in ? $B : undef },
     );
 
-    my $sel_a = $selector->select(
-        sub {
-            my ($id, %res) = @_;
-            print "A: $res{A}\n";
-            return 1; ## auto-cancel
-        },
-        A => 5
-    );
-    my $sel_b = $selector->select(
-        sub {
-            my ($id, %res) = @_;
-            print "B: $res{B}\n";
-            return 0; ## non-cancel
-        },
-        B => 5
-    );
+    my $sel_a = $selector->select(A => 5, sub {
+        my ($id, %res) = @_;
+        print "A: $res{A}\n";
+        return 1; ## auto-cancel
+    });
+    my $sel_b = $selector->select(B => 5, sub {
+        my ($id, %res) = @_;
+        print "B: $res{B}\n";
+        return 0; ## non-cancel
+    });
 
     ## Trigger the resources.
     ## Execution order of selection callbacks is not guaranteed.

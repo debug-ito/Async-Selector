@@ -45,13 +45,13 @@ my $selector;
     get '/comet' => sub {
         my $self = shift;
         my $client_sequence = $self->param('seq');
-        my $selection_id = $selector->select(sub {
+        my $selection_id = $selector->select(res => $client_sequence, sub {
             my ($id, %resources) = @_;
             my ($resource, $sequence)
                 = ($resources{res}{resource}, $resources{res}{sequence});
             $self->render_data("$sequence $resource");
             return 1;           ## long-polling is not persistent
-        }, res => $client_sequence);
+        });
         $self->on(finish => sub {
             $selector->cancel($selection_id);
         });
@@ -60,13 +60,13 @@ my $selector;
     websocket '/websocket' => sub {
         my $self = shift;
         Mojo::IOLoop->stream($self->tx->connection)->timeout(0);
-        my $selection_id = $selector->select(sub {
+        my $selection_id = $selector->select(res => 0, sub {
             my ($id, %resources) = @_;
             my ($resource, $sequence)
                 = ($resources{res}{resource}, $resources{res}{sequence});
             $self->send("$sequence $resource");
             return 0;           ## websocket is persistent
-        }, res => 0);
+        });
         $self->on(finish => sub {
             $selector->cancel($selection_id);
         });
