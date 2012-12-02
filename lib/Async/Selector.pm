@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use Carp;
+use Async::Selector::Selection;
 
 
 =pod
@@ -125,13 +126,19 @@ sub new {
 }
 
 sub _check {
-   my ($self, $selection_id) = @_;
+   my ($self, $selection_id_or_selection) = @_;
    my %results = ();
    my $fired = 0;
-   my $selection = $self->{selections}{$selection_id};
+   my $selection;
+   if(ref($selection_id_or_selection)) {
+       $selection = $selection_id_or_selection;
+   }else {
+       $selection = $self->{selections}{$selection_id_or_selection}; 
+   }
    return 0 if !defined($selection);
-   foreach my $res_key (keys %{$selection->{conditions}}) {
-       my $input = $selection->{conditions}{$res_key};
+   my %conditions = $selection->conditions;
+   foreach my $res_key (keys %conditions) {
+       my $input = $conditions{$res_key};
        if(!defined($self->{resources}{$res_key})) {
            $results{$res_key} = undef;
            next;
@@ -142,8 +149,8 @@ sub _check {
        }
    }
    return 0 if !$fired;
-   if($selection->{cb}->($selection_id, %results)) {
-       $self->cancel($selection_id);
+   if($selection->call(%results)) {
+       $selection->cancel();
    }
    return 1;
 }
@@ -175,6 +182,7 @@ C<register()> method returns C<$selector> object itself.
 
 
 =cut
+
 
 sub register {
    my ($self, %providers) = @_;
@@ -279,22 +287,20 @@ sub select_et {
     if(!%conditions) {
         return undef;
     }
-    my $selection = {
-        conditions => \%conditions,
-        cb => $cb,
-    };
-    my $id = "$selection";
-    $self->{selections}{$id} = $selection;
-    return $id;
+    my $selection = Async::Selector::Selection->new(
+        $self, \%conditions, $cb
+    );
+    $self->{selections}{"$selection"} = $selection;
+    return $selection;
 }
 
 sub select_lt {
     my ($self, @args) = @_;
-    my $id;
-    $id = $self->select_et(@args);
-    return undef if not defined($id);
-    $self->_check($id);
-    return defined($self->{selections}{$id}) ? $id : undef;
+    my $selection;
+    $selection = $self->select_et(@args);
+    return undef if not defined($selection);
+    $self->_check($selection);
+    return defined($self->{selections}{"$selection"}) ? $selection : undef;
 }
 
 *select = \&select_lt;
@@ -315,9 +321,15 @@ C<cancel()> method returns C<$selector> object itself.
 =cut
 
 sub cancel {
-   my ($self, @ids) = @_;
-   delete @{$self->{selections}}{grep { defined($_) } @ids};
-   return $self;
+    my ($self, @selections) = @_;
+    foreach my $s (grep { defined($_) } @selections) {
+        next if not exists $self->{selections}{"$s"};
+        $s->detach();
+        delete $self->{selections}{"$s"};
+    }
+    ## my ($self, @ids) = @_;
+    ## delete @{$self->{selections}}{grep { defined($_) } @ids};
+    return $self;
 }
 
 =pod
@@ -337,9 +349,10 @@ sub trigger {
    my ($self, @resources) = @_;
    my @affected_selections = ();
    selec_loop: foreach my $selection (values %{$self->{selections}}) {
-       foreach my $res (@resources) {
+         my %select_conditions = $selection->conditions;
+         foreach my $res (@resources) {
            next if !defined($res);
-           if(exists($selection->{conditions}{$res})) {
+           if(exists($select_conditions{$res})) {
                push(@affected_selections, $selection);
                next selec_loop;
            }
@@ -375,7 +388,7 @@ Returns the list of currently active selection IDs.
 
 sub selections {
     my ($self) = @_;
-    return keys %{$self->{selections}};
+    return values %{$self->{selections}};
 }
 
 
