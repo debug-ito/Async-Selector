@@ -45,7 +45,7 @@ BEGIN {
 sub collector {
     my ($result_ref, $ret_val) = @_;
     return sub {
-        my ($id, %res) = @_;
+        my ($selection, %res) = @_;
         push(@$result_ref, map { sprintf("%s:%s", $_, $res{$_}) } grep { defined($res{$_}) } keys %res);
         return $ret_val;
     };
@@ -108,12 +108,12 @@ note('Test for N-resource M-selection.');
     cmp_ok(int(@result), "==", 0, "no result because the selection is removed.");
 
     @result = ();
-    my $id = $s->select(1 => 0, 2 => 3, 3 => 4, collector(\@result, 0));
+    my $selection = $s->select(1 => 0, 2 => 3, 3 => 4, collector(\@result, 0));
     checkResult \@result, qw(1:this_is_a_long_string 2:this_is_a_long_string 3:this_is_a_long_string);
     @result = ();
     $rs->set(1 => "", 2 => "aa", 3 => "bb", 4 => "cc", 5 => "dd");
     checkResult \@result, qw(1:);
-    checkSelections $s, $id;
+    checkSelections $s, $selection;
     @result = ();
     $s->trigger(1 .. $N);
     checkResult \@result, qw(1:);
@@ -129,16 +129,17 @@ note('Test for N-resource M-selection.');
     $s->trigger(4, 5);
     checkResult \@result;
 
-    $s->cancel($id);
+    $selection->cancel();
+    checkSelections $s;
 
     @result = ();
     $rs->set(map {$_ => ""} 1 .. $N);
     checkResult \@result;
 
     @result = ();
-    $id = $s->select(3 => 3, 4 => 4, 5 => 5, collector(\@result, 0));
+    $selection = $s->select(3 => 3, 4 => 4, 5 => 5, collector(\@result, 0));
     checkResult \@result;
-    checkSelections $s, $id;
+    checkSelections $s, $selection;
     @result = ();
     $rs->set(1 => "a", 2 => "b", 3 => "c", 4 => "d", 5 => "e");
     checkResult \@result;
@@ -159,23 +160,23 @@ note('Test for N-resource M-selection.');
     my $rs = Sample::Resources->new($s, 1);
     my @result = ();
     note('--- -- non-remove selections');
-    my @ids = ();
-    push @ids, $s->select(1 => 1, collector(\@result, 0));
-    push @ids, $s->select(1 => 2, collector(\@result, 0));
+    my @selections = ();
+    push @selections, $s->select(1 => 1, collector(\@result, 0));
+    push @selections, $s->select(1 => 2, collector(\@result, 0));
     checkResult \@result;
-    checkSelections $s, @ids;
+    checkSelections $s, @selections;
     $rs->set(1 => "A");
     checkResult \@result, qw(1:A);
-    checkSelections $s, @ids;
+    checkSelections $s, @selections;
     @result = ();
     $rs->set(1 => "BB");
     checkResult \@result, qw(1:BB 1:BB);
-    checkSelections $s, @ids;
+    checkSelections $s, @selections;
     @result = ();
     $rs->set(1 => 'a');
     checkResult \@result, qw(1:a);
-    checkSelections $s, @ids;
-    $s->cancel(@ids);
+    checkSelections $s, @selections;
+    $_->cancel() foreach @selections;
     checkSelections $s;
     @result = ();
     $rs->set(1 => 'abcde');
@@ -223,10 +224,10 @@ note('Test for N-resource M-selection.');
     note('--- -- mix auto-remove and non-remove selections');
     $rs->set(1 => "");
     @result = ();
-    @ids = ();
-    push @ids, $s->select(1 => 5, collector(\@result, 0));
+    @selections = ();
+    push @selections, $s->select(1 => 5, collector(\@result, 0));
     $s->select(1 => 6, collector(\@result, 1));
-    push @ids, $s->select(1 => 7, collector(\@result, 0));
+    push @selections, $s->select(1 => 7, collector(\@result, 0));
     $s->select(1 => 8, collector(\@result, 1));
     checkResult \@result;
     @result = ();
@@ -254,7 +255,7 @@ note('Test for N-resource M-selection.');
         $rs->set(1 => ("A" x $num));
         checkResult \@result, ('1:' . ("A" x $num)) x 2;
     }
-    $s->cancel(@ids);
+    $_->cancel() foreach @selections;
     checkSNum $s, 0;
     foreach my $i (1 .. 3) {
         @result = ();
@@ -264,14 +265,14 @@ note('Test for N-resource M-selection.');
     
     note('--- -- cancel() some of the selections');
     $rs->set(1 => "a");
-    @ids = ();
+    @selections = ();
     @result = ();
-    push @ids, $s->select(1 => $_, collector(\@result, 0)) foreach 1 .. 10;
+    push @selections, $s->select(1 => $_, collector(\@result, 0)) foreach 1 .. 10;
     checkResult \@result, "1:a";
-    checkSelections $s, @ids;
+    checkSelections $s, @selections;
     @result = ();
-    $s->cancel(@ids[2, 4, 5, 8]); ## 1 2 4 7 8 10
-    checkSelections $s, @ids[0, 1, 3, 6, 7, 9];
+    $_->cancel() foreach @selections[2, 4, 5, 8]; ## 1 2 4 7 8 10
+    checkSelections $s, @selections[0, 1, 3, 6, 7, 9];
     $rs->set(1 => "bbbbbb");
     checkResult(\@result, ("1:bbbbbb") x 3);
 }

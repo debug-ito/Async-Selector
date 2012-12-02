@@ -24,7 +24,7 @@ my %result = ();
 sub collect {
     my ($auto_cancel) = @_;
     return sub {
-        my ($id, %res) = @_;
+        my ($selection, %res) = @_;
         foreach my $key (keys %res) {
             if(!exists($result{$key})) {
                 $result{$key} = $res{$key}
@@ -47,7 +47,8 @@ foreach my $method (qw(select select_lt)) {
     %result = ();
     $s->trigger('a');
     is_deeply(\%result, {a => 0}, "callback fired.");
-    $s->cancel($s->selections);
+    ## $s->cancel($s->selections);
+    $_->cancel foreach $s->selections;
     selnum 0;
 }
 
@@ -58,7 +59,8 @@ selnum 1;
 $s->trigger('a');
 is_deeply(\%result, {a => 0}, "callback fired");
 selnum 1;
-$s->cancel($s->selections);
+## $s->cancel($s->selections);
+$_->cancel foreach $s->selections;
 selnum 0;
 
 my $resource_b = 0;
@@ -76,7 +78,8 @@ is_deeply(\%result, {a => 0, b => undef}, "callback fired");
 $s->trigger('a', 'b');
 is_deeply(\%result, {a => undef, b => -20}, "callback fired");
 
-$s->cancel($s->selections);
+## $s->cancel($s->selections);
+$_->cancel foreach $s->selections;
 selnum 0;
 
 ($resource_a, $resource_b) = (0, 0);

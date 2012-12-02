@@ -28,7 +28,7 @@ note("--- LT select, auto-remove, not immediate.");
 my @result = ();
 ok(
     defined($s->select(a => 5, sub {
-        my ($id, %res) = @_;
+        my ($selection, %res) = @_;
         cmp_ok(int(keys %res), "==", 1, "selected one resource.");
         ok(defined($res{a}), "resource a is available.");
         push(@result, $res{a});
@@ -54,7 +54,7 @@ cmp_ok(int(@result), "==", 0, "no result anymore, because the selection was remo
 note("--- LT select, auto-remove, immediate fire.");
 ok(
     !defined($s->select(a => 3, sub {
-        my ($id, %res) = @_;
+        my ($selection, %res) = @_;
         push(@result, $res{a});
         return 1;
     })),
@@ -66,16 +66,17 @@ is((shift @result), $res_a, "... and it's $res_a");
 {
     note("--- LT select, non-remove, not immediate.");
     @result = ();
-    my $id = $s->select(a => 10, sub {
-        my ($id, %res) = @_;
+    my $selection = $s->select(a => 10, sub {
+        my ($selection, %res) = @_;
         push(@result, $res{a});
         return 0;
     });
-    ok(defined($id), "select() method returns defined ID");
+    ok(defined($selection), "select() method returns defined value...");
+    isa_ok($selection, 'Async::Selector::Selection', "... and it's an Async::Selector::Selection");
     {
         my @selections = $s->selections;
         is(int(@selections), 1, "Currently 1 selection.");
-        is($selections[0], $id, "... and it's $id.");
+        is($selections[0], $selection, "... and it's $selection.");
     }
     $res_a = 9; $s->trigger('a');
     cmp_ok(int(@result), "==", 0, "no result.");
@@ -88,7 +89,7 @@ is((shift @result), $res_a, "... and it's $res_a");
     @result = ();
     
     note("--- -- cancel() operation.");
-    is($s->cancel($id), $s, "cancel() returns the object.");
+    is($selection->cancel(), $selection, "cancel() returns the Selection object.");
     $s->trigger('a') foreach 1..3;
     cmp_ok(int(@result), "==", 0, "no result because the selection is canceled.");
     is(int($s->selections), 0, "no selections");
@@ -98,13 +99,13 @@ is((shift @result), $res_a, "... and it's $res_a");
     note("--- LT select, non-remove, immediate.");
     @result = ();
     $res_a = 20;
-    my $id = $s->select_lt(a => 1, sub {
-        my ($id, %res) = @_;
+    my $selection = $s->select_lt(a => 1, sub {
+        my ($selection, %res) = @_;
         push(@result, $res{a});
         return 0;
     });
     is(int($s->selections), 1, "One selection");
-    is(($s->selections)[0], $id, "... and it's $id.");
+    is(($s->selections)[0], $selection, "... and it's $selection.");
     foreach (1 .. 3) {
         cmp_ok(int(@result), "==", 1, "got result immediately.");
         is($result[0], $res_a, "... and it's $res_a");
@@ -113,7 +114,7 @@ is((shift @result), $res_a, "... and it's $res_a");
     }
     @result = ();
     note("--- -- cancel() operation.");
-    $s->cancel($id);
+    $selection->cancel();
     is(int($s->selections), 0, "No selection");
     $s->trigger('a');
     $s->trigger('a');
@@ -124,13 +125,13 @@ is((shift @result), $res_a, "... and it's $res_a");
     note("--- ET select, auto-remove, forcibly not immediate.");
     @result = ();
     $res_a = 5;
-    my $id = $s->select_et(a => 1, sub {
-        my ($id, %res) = @_;
+    my $selection = $s->select_et(a => 1, sub {
+        my ($selection, %res) = @_;
         push(@result, $res{a});
         return 1;
     });
     is(int($s->selections), 1, "One selection");
-    is(($s->selections)[0], $id, "... and it's $id.");
+    is(($s->selections)[0], $selection, "... and it's $selection.");
     cmp_ok(int(@result), "==", 0, "got no result because it's edge-triggered.");
     $s->trigger('a');
     cmp_ok(int(@result), "==", 1, "got a result when triggerred.");
@@ -138,14 +139,15 @@ is((shift @result), $res_a, "... and it's $res_a");
     @result = ();
     $s->trigger('a');
     cmp_ok(int(@result), "==", 0, "selection has been automatically removed.");
+    cmp_ok(int($s->selections), "==", 0, "No selections");
 }
 
 {
     note("--- ET select, non-remove, forcibly not immediate.");
     @result = ();
     $res_a = 0;
-    my $id = $s->select_et(a => 5, sub {
-        my ($id, %res) = @_;
+    my $selection = $s->select_et(a => 5, sub {
+        my ($selection, %res) = @_;
         push(@result, $res{a});
         return 0;
     });
@@ -163,7 +165,8 @@ is((shift @result), $res_a, "... and it's $res_a");
     $s->trigger('a');
     cmp_ok(int(@result), "==", 0, "If the resource is unavailable, it never calls the selection callback, even if the resource has changed.");
 
-    $s->cancel($id);
+    $selection->cancel();
+    cmp_ok(int($s->selections), "==", 0, "No selections.");
 }
 
 {
@@ -177,7 +180,7 @@ is((shift @result), $res_a, "... and it's $res_a");
     @result = ();
     $res_a = 0;
     $s->select(a => 5, sub {
-        my ($id, %res) = @_;
+        my ($selection, %res) = @_;
         push(@result, $res{a});
         return 1;
     });

@@ -17,7 +17,7 @@ $s->register(
 
 my $fired = 0;
 $s->select(a => undef, b => undef, c => undef, sub {
-    my ($id, %res) = @_;
+    my ($selection, %res) = @_;
     $fired = 1;
     ok(!defined($res{a}), 'a is not ready');
     is($res{b}, "B", 'b is ready');
@@ -29,7 +29,7 @@ is(int($s->selections), 0, "no selection");
 
 $fired = 0;
 $s->select_et(a => undef, b => undef, c => undef, sub {
-    my ($id, %res) = @_;
+    my ($selection, %res) = @_;
     $fired = 1;
     ok(!defined($res{a}), 'a is not ready');
     is($res{b}, "B", 'b is ready');
@@ -44,7 +44,7 @@ is(int($s->selections), 0, "no selection");
 
 $fired = 0;
 $s->select(a => '', b => 0, c => '', sub {
-    my ($id, %res) = @_;
+    my ($selection, %res) = @_;
     $fired = 1;
     is($res{a}, "A", 'a is ready');
     ok(!defined($res{b}), 'b is not ready');
@@ -56,7 +56,7 @@ is(int($s->selections), 0, "no selection");
 
 $fired = 0;
 $s->select_et(a => '', b => 0, c => '', sub {
-    my ($id, %res) = @_;
+    my ($selection, %res) = @_;
     $fired = 1;
     is($res{a}, "A", 'a is ready');
     ok(!defined($res{b}), 'b is not ready');

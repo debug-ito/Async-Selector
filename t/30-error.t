@@ -11,7 +11,7 @@ note('Test for erroneous situations.');
 sub catter {
     my ($result_ref, $ret_val) = @_;
     return sub {
-        my ($id, %res) = @_;
+        my ($selection, %res) = @_;
         $$result_ref .= join ',', map { "$_:$res{$_}" } sort {$a cmp $b} grep { defined($res{$_}) } keys %res;
         return $ret_val;
     };
@@ -80,18 +80,18 @@ sub checkRNum {
 {
     note('--- select() with no resource');
     my $s = new_ok('Async::Selector');
-    my $id = undef;
+    my $selection = undef;
     my @result = ();
-    warning_is {$id = $s->select(sub { push(@result, 'token'); return 0 })}
+    warning_is {$selection = $s->select(sub { push(@result, 'token'); return 0 })}
         undef, "select() finishes with no warning even if it is supplied with no resource selection.";
-    ok(!defined($id), "... it returns no selection ID. selection is silently rejected.");
+    ok(!defined($selection), "... it returns no selection object. selection is silently rejected.");
     is(int(@result), 0, "... callback is not executed, because the selection is rejected.");
     checkSNum $s, 0;
 
     @result = ();
-    warning_is {$id = $s->select_et(sub { push(@result, 'token'); return 0 })}
+    warning_is {$selection = $s->select_et(sub { push(@result, 'token'); return 0 })}
         undef, "The behavior is the same for select_et().";
-    ok(!defined($id), "... it returns no selection ID.");
+    ok(!defined($selection), "... it returns no selection object.");
     is(int(@result), 0, "... callback is not executed, because the selection is rejected.");
     checkSNum $s, 0;
 }
@@ -155,9 +155,9 @@ sub checkRNum {
     my $res = 0;
     $s->register('res' => sub { my $in = shift; return $res >= $in ? $res : undef });
     my $result = "";
-    my @ids = ();
-    push @ids, $s->select('res' => 5, catter(\$result, 0));
-    push @ids, $s->select('res' => 10, catter(\$result, 1));
+    my @selections = ();
+    push @selections, $s->select('res' => 5, catter(\$result, 0));
+    push @selections, $s->select('res' => 10, catter(\$result, 1));
     checkSNum $s, 2;
     warning_is { $s->unregister('res') } undef, "unregister() does not warn even when the deleted resource is now selected.";
     checkSNum $s, 2;
@@ -205,7 +205,7 @@ sub checkRNum {
     note('--- trigger() to non-existent resource');
     my $s = new_ok('Async::Selector');
     warning_is { $s->trigger(qw(this does not exist)) } undef, "trigger() non-existent resources is OK. Just ignored.";
-    $s->select(want => 10, sub { warn "Callback fired."; return 0 });
+    $s->select(want => 10, sub { fail("Callback fired."); return 0 });
     checkSNum $s, 1;
     warning_is { $s->trigger(qw(that does not here)) } undef, "trigger() non-selected resource does not fire selection.";
     
@@ -214,18 +214,18 @@ sub checkRNum {
 }
 
 {
-    note('--- cancel() undef selection');
+    note('--- $selector->cancel() undef selection');
     my $s = new_ok('Async::Selector');
     warning_is { $s->cancel(undef, undef, undef) } undef, "cancel(undef) is OK.";
-    my $id = $s->select(want => 10, sub { warn "Callback fired."; return 1 });
+    my $selection = $s->select(want => 10, sub { fail("Callback fired."); return 1 });
     checkSNum $s, 1;
-    is(($s->selections)[0], $id, "selection ID is $id.");
+    is(($s->selections)[0], $selection, "selection object is $selection.");
     warning_is { $s->cancel(undef) } undef, "cancel(undef) does nothing.";
     checkSNum $s, 1;
-    note('--- cancel() multiple times');
-    warning_is { $s->cancel($id, $id, $id) } undef, "It's OK to cancel() the same ID multiple times at once.";
+    note('--- -- cancel() multiple times');
+    warning_is { $s->cancel($selection, $selection, $selection) } undef, "It's OK to cancel() the same Selection object multiple times at once.";
     checkSNum $s, 0;
-    warning_is { $s->cancel($id, 'this', "not", "exists") } undef, "cancel() non-existent IDs  is OK. Ignored.";
+    warning_is { $s->cancel($selection, 'this', "not", "exists") } undef, "cancel() non-existent selections is OK. Ignored.";
 }
 
 done_testing();
