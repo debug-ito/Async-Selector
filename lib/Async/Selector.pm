@@ -305,7 +305,6 @@ sub select_lt {
 
 *select = \&select_lt;
 
-
 =pod
 
 =head2 $selector->cancel($selection_id, ...);
@@ -324,7 +323,7 @@ sub cancel {
     my ($self, @selections) = @_;
     foreach my $s (grep { defined($_) } @selections) {
         next if not exists $self->{selections}{"$s"};
-        $s->detach();
+        $self->{selections}{"$s"}->detach();
         delete $self->{selections}{"$s"};
     }
     ## my ($self, @ids) = @_;
