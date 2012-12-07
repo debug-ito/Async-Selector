@@ -5,7 +5,7 @@ use Test::Warn;
 
 BEGIN {
     use_ok('Async::Selector');
-    use_ok('Async::Selector::Selection'); ## -> Watcher
+    use_ok('Async::Selector::Watcher');
 }
 
 {
@@ -22,7 +22,7 @@ BEGIN {
         push(@result, $res{a});
         $w->cancel();
     });
-    isa_ok($w, 'Async::Selector::Selection');
+    isa_ok($w, 'Async::Selector::Watcher');
     ok($w->active, "watcher is active");
     is(int($s->watchers), 1, "1 pending watcher");
     is(int(@result), 0, "result empty");
@@ -37,7 +37,7 @@ BEGIN {
     $w = $s->watch(sub {
         fail('This should not be executed.');
     });
-    isa_ok($w, "Async::Selector::Selection");
+    isa_ok($w, "Async::Selector::Watcher");
     ok(!$w->active, 'empty watch should return an inactive watcher.');
 }
 
@@ -93,7 +93,7 @@ sub checkConditions {
         fail("This should not be executed.");
         return 0;
     });
-    isa_ok($w, 'Async::Selector::Selection');
+    isa_ok($w, 'Async::Selector::Watcher');
     is(int($s->watchers), 1, "1 watcher.");
     is($s->cancel($w), $s, "cancel() returns Selector object.");
     is(int($s->watchers), 0, "0 watcher.");
@@ -105,7 +105,7 @@ sub checkConditions {
         push(@result, $res{a});
         return 0;
     });
-    isa_ok($w, 'Async::Selector::Selection');
+    isa_ok($w, 'Async::Selector::Watcher');
     is(int(@result), 1, "Immediate watch.");
     is($result[0], 0, "The result is obtained.");
     $s->cancel($w);
@@ -127,7 +127,7 @@ sub checkConditions {
         my ($r, %res) = @_;
         fail("This should not be executed.");
     });
-    isa_ok($w, 'Async::Selector::Selection');
+    isa_ok($w, 'Async::Selector::Watcher');
     is(int($s->watchers), 1, "1 pending watchers.");
     $s->cancel($w);
     is(int($s->watchers), 0, "0 pending watchers.");
@@ -170,11 +170,11 @@ sub checkConditions {
     my $wa = $sa->watch(a => 10, sub {
         fail('This should not be executed.');
     });
-    isa_ok($wa, 'Async::Selector::Selection');
+    isa_ok($wa, 'Async::Selector::Watcher');
     my $wb = $sb->watch(b => 10, sub {
         fail('This should not be executed.');
     });
-    isa_ok($wb, 'Async::Selector::Selection');
+    isa_ok($wb, 'Async::Selector::Watcher');
     is(int($sa->watchers), 1, '1 watcher in $sa');
     is(int($sb->watchers), 1, '1 watcher in $sb');
     ok($wa->active, '$wa is active');
