@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use Test::More;
 
-note("Test for 1-resource 1-selection.");
+note("Test for 1-resource 1-watcher.");
 
 BEGIN {
     use_ok('Async::Selector');
@@ -93,7 +93,7 @@ my @result = ();
     note("--- -- cancel() operation.");
     is($w->cancel(), $w, "cancel() returns the Watcher object.");
     $s->trigger('a') foreach 1..3;
-    cmp_ok(int(@result), "==", 0, "no result because the selection is canceled.");
+    cmp_ok(int(@result), "==", 0, "no result because the watcher is canceled.");
     is(int($s->watchers), 0, "no watchers");
     ok(!$w->active, 'watcher is now inactive');
 }

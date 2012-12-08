@@ -43,11 +43,14 @@ BEGIN {
 }
 
 sub collector {
-    my ($result_ref, $ret_val) = @_;
+    my ($result_ref, $one_shot) = @_;
     return sub {
-        my ($selection, %res) = @_;
-        push(@$result_ref, map { sprintf("%s:%s", $_, $res{$_}) } grep { defined($res{$_}) } keys %res);
-        return $ret_val;
+        my ($w, %res) = @_;
+        ok(defined($res{$_}), "value for key $_ is defined.") foreach keys %res;
+        push(@$result_ref, map { sprintf("%s:%s", $_, $res{$_}) } keys %res);
+        if($one_shot) {
+            $w->cancel();
+        }
     };
 }
 
@@ -74,46 +77,43 @@ sub checkResult {
     checkArray('result', $result_ref, @exp_list);
 }
 
-sub checkSelections {
+sub checkWatchers {
     my ($selector, @exp_list) = @_;
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    checkArray('selection', [$selector->selections], @exp_list);
+    checkArray('watchers', [$selector->watchers], @exp_list);
 }
 
-sub checkSNum {
-    my ($selector, $selection_num) = @_;
+sub checkWNum {
+    my ($selector, $watcher_num) = @_;
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    is(int($selector->selections), $selection_num, "$selection_num selections.");
+    is(int($selector->watchers), $watcher_num, "$watcher_num watchers.");
 }
 
-
-
-note('Test for N-resource M-selection.');
 
 {
-    note('--- N-resource, 1-selection.');
+    note('--- N-resource, 1-watch.');
     my $N = 5;
     my $s = new_ok('Async::Selector');
     my $rs = Sample::Resources->new($s, 1 .. $N);
     my @result = ();
-    $s->select(1 => 3, 2 => 4, 3 => 2, 4 => 9, 5 => 2, collector(\@result, 1));
+    $s->watch(1 => 3, 2 => 4, 3 => 2, 4 => 9, 5 => 2, collector(\@result, 1));
     checkResult \@result;
     $rs->set(1 => "sk", 2 => "sas", 3 => "", 4 => "abcdefgh", 5 => "Y");
     checkResult \@result;
     $rs->set(1 => "ab", 2 => "asas", 3 => "BB",               5 => "ybb");
     checkResult \@result, qw(2:asas 3:BB 5:ybb);
-    checkSelections $s;
+    checkWatchers $s;
     @result = ();
     $rs->set(map {$_ => "this_is_a_long_string"} 1 .. $N);
-    cmp_ok(int(@result), "==", 0, "no result because the selection is removed.");
+    cmp_ok(int(@result), "==", 0, "no result because the watcher is removed.");
 
     @result = ();
-    my $selection = $s->select(1 => 0, 2 => 3, 3 => 4, collector(\@result, 0));
+    my $w = $s->watch(1 => 0, 2 => 3, 3 => 4, collector(\@result, 0));
     checkResult \@result, qw(1:this_is_a_long_string 2:this_is_a_long_string 3:this_is_a_long_string);
     @result = ();
     $rs->set(1 => "", 2 => "aa", 3 => "bb", 4 => "cc", 5 => "dd");
     checkResult \@result, qw(1:);
-    checkSelections $s, $selection;
+    checkWatchers $s, $w;
     @result = ();
     $s->trigger(1 .. $N);
     checkResult \@result, qw(1:);
@@ -124,22 +124,23 @@ note('Test for N-resource M-selection.');
     $rs->set(2 => "aaa", 3 => "bbbb", 4 => "ccccc", 5 => "dddddd");
     checkResult \@result, qw(1: 2:aaa 3:bbbb);
 
-    note("--- -- if the triggered resource is not selected, the selection callback is not executed.");
+    note("--- -- if the triggered resource is not selected, the watcher callback is not executed.");
     @result = ();
     $s->trigger(4, 5);
     checkResult \@result;
 
-    $selection->cancel();
-    checkSelections $s;
+    checkWatchers $s, $w;
+    $w->cancel();
+    checkWatchers $s;
 
     @result = ();
     $rs->set(map {$_ => ""} 1 .. $N);
     checkResult \@result;
 
     @result = ();
-    $selection = $s->select(3 => 3, 4 => 4, 5 => 5, collector(\@result, 0));
+    $w = $s->watch(3 => 3, 4 => 4, 5 => 5, collector(\@result, 0));
     checkResult \@result;
-    checkSelections $s, $selection;
+    checkWatchers $s, $w;
     @result = ();
     $rs->set(1 => "a", 2 => "b", 3 => "c", 4 => "d", 5 => "e");
     checkResult \@result;
@@ -155,157 +156,157 @@ note('Test for N-resource M-selection.');
 }
 
 {
-    note('--- 1-resource, M-selections');
+    note('--- 1-resource, M-watchers');
     my $s = new_ok('Async::Selector');
     my $rs = Sample::Resources->new($s, 1);
     my @result = ();
-    note('--- -- non-remove selections');
-    my @selections = ();
-    push @selections, $s->select(1 => 1, collector(\@result, 0));
-    push @selections, $s->select(1 => 2, collector(\@result, 0));
+    note('--- -- continuous watchers');
+    my @watchers = ();
+    push @watchers, $s->watch(1 => 1, collector(\@result, 0));
+    push @watchers, $s->watch(1 => 2, collector(\@result, 0));
     checkResult \@result;
-    checkSelections $s, @selections;
+    checkWatchers $s, @watchers;
     $rs->set(1 => "A");
     checkResult \@result, qw(1:A);
-    checkSelections $s, @selections;
+    checkWatchers $s, @watchers;
     @result = ();
     $rs->set(1 => "BB");
     checkResult \@result, qw(1:BB 1:BB);
-    checkSelections $s, @selections;
+    checkWatchers $s, @watchers;
     @result = ();
     $rs->set(1 => 'a');
     checkResult \@result, qw(1:a);
-    checkSelections $s, @selections;
-    $_->cancel() foreach @selections;
-    checkSelections $s;
+    checkWatchers $s, @watchers;
+    $_->cancel() foreach @watchers;
+    checkWatchers $s;
     @result = ();
     $rs->set(1 => 'abcde');
     checkResult \@result;
 
-    note('--- -- auto-remove selections');
+    note('--- -- one-shot watchers');
     @result = ();
-    $s->select(1 => 4, collector(\@result, 1));
+    $s->watch(1 => 4, collector(\@result, 1));
     checkResult \@result, qw(1:abcde);
-    checkSNum $s, 0;
-    $s->select(1 => 6, collector(\@result, 1));
+    checkWNum $s, 0;
+    $s->watch(1 => 6, collector(\@result, 1));
     checkResult \@result, qw(1:abcde);
-    checkSNum $s, 1;
-    $s->select(1 => 7, collector(\@result, 1));
+    checkWNum $s, 1;
+    $s->watch(1 => 7, collector(\@result, 1));
     checkResult \@result, qw(1:abcde);
-    checkSNum $s, 2;
-    $s->select(1 => 3, collector(\@result, 1));
+    checkWNum $s, 2;
+    $s->watch(1 => 3, collector(\@result, 1));
     checkResult \@result, qw(1:abcde 1:abcde);
-    checkSNum $s, 2;
-    $s->select(1 => 8, collector(\@result, 1));
+    checkWNum $s, 2;
+    $s->watch(1 => 8, collector(\@result, 1));
     checkResult \@result, qw(1:abcde 1:abcde);
-    checkSNum $s, 3;
-    $s->select(1 => 9, collector(\@result, 1));
+    checkWNum $s, 3;
+    $s->watch(1 => 9, collector(\@result, 1));
     checkResult \@result, qw(1:abcde 1:abcde);
-    checkSNum $s, 4;
+    checkWNum $s, 4;
     @result = ();
     $rs->set(1 => "666666");
     checkResult \@result, "1:666666";
-    checkSNum $s, 3;
+    checkWNum $s, 3;
     $rs->set(1 => "7777777");
     checkResult \@result, qw(1:666666 1:7777777);
-    checkSNum $s, 2;
+    checkWNum $s, 2;
     $rs->set(1 => "88888888");
     checkResult \@result, qw(1:666666 1:7777777 1:88888888);
-    checkSNum $s, 1;
+    checkWNum $s, 1;
     $rs->set(1 => "999999999");
     checkResult \@result, qw(1:666666 1:7777777 1:88888888 1:999999999);
-    checkSNum $s, 0;
+    checkWNum $s, 0;
     @result = ();
     foreach my $num (10 .. 15) {
         $rs->set(1 => "A" x $num);
         checkResult \@result;
     }
     
-    note('--- -- mix auto-remove and non-remove selections');
+    note('--- -- mix one-shot and continuous watchers');
     $rs->set(1 => "");
     @result = ();
-    @selections = ();
-    push @selections, $s->select(1 => 5, collector(\@result, 0));
-    $s->select(1 => 6, collector(\@result, 1));
-    push @selections, $s->select(1 => 7, collector(\@result, 0));
-    $s->select(1 => 8, collector(\@result, 1));
+    @watchers = ();
+    push @watchers, $s->watch(1 => 5, collector(\@result, 0));
+    $s->watch(1 => 6, collector(\@result, 1));
+    push @watchers, $s->watch(1 => 7, collector(\@result, 0));
+    $s->watch(1 => 8, collector(\@result, 1));
     checkResult \@result;
     @result = ();
     $rs->set(1 => "qqqq");
     checkResult \@result;
-    checkSNum $s, 4;
+    checkWNum $s, 4;
     @result = ();
     $rs->set(1 => "wwwww");
     checkResult \@result, "1:wwwww";
-    checkSNum $s, 4;
+    checkWNum $s, 4;
     @result = ();
     $rs->set(1 => "eeeeee");
     checkResult \@result, qw(1:eeeeee 1:eeeeee);
-    checkSNum $s, 3;
+    checkWNum $s, 3;
     @result = ();
     $rs->set(1 => "rrrrrrr");
     checkResult \@result, qw(1:rrrrrrr 1:rrrrrrr);
-    checkSNum $s, 3;
+    checkWNum $s, 3;
     @result = ();
     $rs->set(1 => "tttttttt");
     checkResult \@result, qw(1:tttttttt 1:tttttttt 1:tttttttt);
-    checkSNum $s, 2;
+    checkWNum $s, 2;
     foreach my $num (9 .. 12) {
         @result = ();
         $rs->set(1 => ("A" x $num));
         checkResult \@result, ('1:' . ("A" x $num)) x 2;
     }
-    $_->cancel() foreach @selections;
-    checkSNum $s, 0;
+    $_->cancel() foreach @watchers;
+    checkWNum $s, 0;
     foreach my $i (1 .. 3) {
         @result = ();
         $rs->set(1 => "PPPPPPPPPPPPPP");
         checkResult \@result;
     }
     
-    note('--- -- cancel() some of the selections');
+    note('--- -- cancel() some of the watchers');
     $rs->set(1 => "a");
-    @selections = ();
+    @watchers = ();
     @result = ();
-    push @selections, $s->select(1 => $_, collector(\@result, 0)) foreach 1 .. 10;
+    push @watchers, $s->watch(1 => $_, collector(\@result, 0)) foreach 1 .. 10;
     checkResult \@result, "1:a";
-    checkSelections $s, @selections;
+    checkWatchers $s, @watchers;
     @result = ();
-    $_->cancel() foreach @selections[2, 4, 5, 8]; ## 1 2 4 7 8 10
-    checkSelections $s, @selections[0, 1, 3, 6, 7, 9];
+    $_->cancel() foreach @watchers[2, 4, 5, 8]; ## 1 2 4 7 8 10
+    checkWatchers $s, @watchers[0, 1, 3, 6, 7, 9];
     $rs->set(1 => "bbbbbb");
     checkResult(\@result, ("1:bbbbbb") x 3);
 }
 
 {
-    note('--- N-resource, M-selections');
+    note('--- N-resource, M-watchers');
     my $s = new_ok('Async::Selector');
     my $rs = Sample::Resources->new($s, 1 .. 5);
     my @result = ();
-    $s->select(1 => 5, 2 => 5, 3 => 5                , collector(\@result, 1));
-    $s->select(        2 => 4, 3 => 4, 4 => 4        , collector(\@result, 1));
-    $s->select(1 => 5,                 4 => 5, 5 => 5, collector(\@result, 1));
-    $s->select(        2 => 0, 3 => 0, 4 => 3, 5 => 5, collector(\@result, 1));
-    $s->select(1 => 2,                 4 => 5, 5 => 2, collector(\@result, 1));
-    $s->select(        2 => 4, 3 => 4                , collector(\@result, 1));
+    $s->watch(1 => 5, 2 => 5, 3 => 5                , collector(\@result, 1));
+    $s->watch(        2 => 4, 3 => 4, 4 => 4        , collector(\@result, 1));
+    $s->watch(1 => 5,                 4 => 5, 5 => 5, collector(\@result, 1));
+    $s->watch(        2 => 0, 3 => 0, 4 => 3, 5 => 5, collector(\@result, 1));
+    $s->watch(1 => 2,                 4 => 5, 5 => 2, collector(\@result, 1));
+    $s->watch(        2 => 4, 3 => 4                , collector(\@result, 1));
     checkResult \@result, qw(2: 3:);
-    checkSNum $s, 5;
+    checkWNum $s, 5;
     @result = ();
     $rs->set(1 => "aa", 5 => "aa");
     checkResult \@result, qw(1:aa 5:aa);
-    checkSNum $s, 4;
+    checkWNum $s, 4;
     @result = ();
     $rs->set(3 => "AAAA", 4 => "AAAA");
     checkResult \@result, qw(3:AAAA 3:AAAA 4:AAAA);
-    checkSNum $s, 2;
+    checkWNum $s, 2;
     @result = ();
     $rs->set(map {$_ => "bbbbbb"} 1 .. 5);
     checkResult \@result, qw(1:bbbbbb 2:bbbbbb 3:bbbbbb 1:bbbbbb 4:bbbbbb 5:bbbbbb);
-    checkSNum $s, 0;
+    checkWNum $s, 0;
     @result = ();
     $rs->set(map {$_ => "cccccccccccc"} 1 .. 5);
     checkResult \@result;
-    checkSNum $s, 0;
+    checkWNum $s, 0;
 }
 
 done_testing();

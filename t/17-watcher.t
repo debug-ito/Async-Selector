@@ -115,7 +115,7 @@ sub checkConditions {
     $s->trigger('a');
     is(int(@result), 0, "No result obtained because no pending watcher.");
 
-    note("--- -- N-resources, 1-selection cancel.");
+    note("--- -- N-resources, 1-watch cancel.");
     $s = Async::Selector->new();
     foreach my $res_id (1 .. 5) {
         $s->register($res_id => sub {
@@ -132,7 +132,7 @@ sub checkConditions {
     $s->cancel($w);
     is(int($s->watchers), 0, "0 pending watchers.");
 
-    note('--- -- 1-resource,  M-selections cancel.');
+    note('--- -- 1-resource,  M-watchers cancel.');
     $s = Async::Selector->new();
     $s->register(a => sub { undef });
     my @ws = ();
