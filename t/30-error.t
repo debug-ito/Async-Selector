@@ -206,9 +206,46 @@ sub catter {
     $s->watch(want => 10, sub { fail("Callback fired.") });
     checkWNum $s, 1;
     warning_is { $s->trigger(qw(that is not here)) } undef, "trigger() non-selected resource does not fire the watcher.";
-    
-    note('--- trigger() nothing');
-    warning_is { $s->trigger() } undef, "trigger() with no argument is OK (but meaningless).";
+}
+
+{    
+    note('--- trigger() undef and other junks ');
+    my $s = new_ok('Async::Selector');
+    my @result = ();
+    $s->register(a => sub { 10 }, "" => sub { 20 });
+    $s->watch_et(a => 0, sub {
+        my ($w, %res) = @_;
+        $result[0] = $res{a};
+    });
+    $s->watch_et("" => 0, sub {
+        my ($w, %res) = @_;
+        $result[1] = $res{''};
+    });
+    is(int(@result), 0, "not fired.");
+
+    @result = ();
+    warning_is { $s->trigger() } undef, "trigger() with no argument complains nothing and does nothing.";
+    is_deeply(\@result, [], "not fired");
+
+    @result = ();
+    warning_is { $s->trigger(undef) } undef, "trigger ignores undef. no warning.";
+    is_deeply(\@result, [], 'not fired');
+
+    @result = ();
+    warning_is { $s->trigger(11.02) } undef, 'trigger(number) complains nothing.';
+    is_deeply(\@result, [], 'not fired');
+
+    @result = ();
+    warning_is { $s->trigger(sub {}, [], {}) } undef, 'triggering other junks complains nothing';
+    is_deeply(\@result, [], 'not fired');
+
+    @result = ();
+    warning_is { $s->trigger('a', undef, 'a') } undef, 'trigger(..., undef, ...): undef is still ignored and no warning.';
+    is_deeply(\@result, [10], 'fired');
+
+    @result = ();
+    warning_is { $s->trigger('b', undef, '', 'a') } undef, 'trigger(..., undef, "", ...): no warning';
+    is_deeply(\@result, [10, 20], 'both fired');
 }
 
 done_testing();
