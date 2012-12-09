@@ -288,6 +288,9 @@ sub checkWNum {
     my $s = new_ok('Async::Selector');
     my $rs = Sample::Resources->new($s, 1 .. 5);
     my @result = ();
+
+    fail("Check resources and conditions for these!")
+    
     $s->watch(1 => 5, 2 => 5, 3 => 5                , collector(\@result, 1));
     $s->watch(        2 => 4, 3 => 4, 4 => 4        , collector(\@result, 1));
     $s->watch(1 => 5,                 4 => 5, 5 => 5, collector(\@result, 1));
