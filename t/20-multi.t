@@ -2,7 +2,6 @@ use strict;
 use warnings;
 use Test::More;
 use Test::Builder;
-use List::Util qw(first);
 
 use FindBin;
 use lib "$FindBin::RealBin/lib";
@@ -74,6 +73,7 @@ sub checkResult {
     $w = $s->watch(1 => 0, 2 => 5, 4 => 2, sub {
         my ($watcher, %res) = @_;
         $fired = 1;
+        ok(!defined($w), '$w is not defined at this time because this is immediate fire.');
         checkCond($watcher, [1,2,4], {1=>0, 2=>5, 4=>2}, "watcher in callback");
         is($res{1}, "", "got resource 1");
         ok(!exists($res{$_}), "No key for resource $_") foreach 2..5;
@@ -208,7 +208,7 @@ sub checkResult {
     note('--- -- one-shot watchers');
     @result = ();
     $w = $s->watch(1 => 4, collector(\@result, 1));
-    ok(!$w->inactive, "immediate fire gives inactive watcher");
+    ok(!$w->active, "immediate fire gives inactive watcher");
     checkCond($w, [1], {1 => 4}, "inactive watcher");
     checkResult \@result, qw(1:abcde);
     checkWNum $s, 0;

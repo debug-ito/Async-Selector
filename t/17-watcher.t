@@ -4,6 +4,10 @@ use Test::More;
 use Test::Builder;
 use Test::Warn;
 
+use FindBin;
+use lib "$FindBin::RealBin/lib";
+use Async::Selector::testutils;
+
 BEGIN {
     use_ok('Async::Selector');
     use_ok('Async::Selector::Watcher');
@@ -109,8 +113,8 @@ sub testConditions {
     my $sa = Async::Selector->new();
     my $sb = Async::Selector->new();
     my @w = (
-        map { $sa->watch(a => 10, sub { fail('sa: this should not be executed') }) } 1..5,
-        map { $sb->watch(a => 10, sub { fail('sb: this should not be executed') }) } 1..5,
+        (map { $sa->watch(a => 10, sub { fail('sa: this should not be executed') }) } 1..5),
+        (map { $sb->watch(a => 10, sub { fail('sb: this should not be executed') }) } 1..5),
     );
     is(int($sa->watchers), 5);
     is(int($sb->watchers), 5);

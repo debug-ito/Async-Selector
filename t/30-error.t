@@ -85,7 +85,7 @@ sub catter {
     checkWNum $s, 0;
 
     @result = ();
-    warning_is {$watcher = $s->watcher_et(sub { push(@result, 'token'); return 0 })}
+    warning_is {$watcher = $s->watch_et(sub { push(@result, 'token'); return 0 })}
         undef, "The behavior is the same for watch_et().";
     isa_ok($watcher, "Async::Selector::Watcher", '... it should still return a Watcher object.');
     ok(!$watcher->active, "... but the Watcher is already inactive.");
@@ -114,7 +114,7 @@ sub catter {
     is(int($s->watchers), 1, "watcher is alive");
     $s->trigger('a');
     is($fired, 1, "watcher fired.");
-    is(int($s->watchers), 0, "currently no watcher.");
+    is(int($s->watchers), 1, "watcher is alive. cancel() is not called in the watcher callback.");
 }
 
 {

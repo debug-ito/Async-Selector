@@ -4,6 +4,7 @@ use warnings;
 use base qw(Exporter);
 use Test::Builder;
 use Test::More;
+use List::Util qw(first);
 
 our @EXPORT = qw(checkCond checkArray checkWatchers checkWNum checkRNum);
 our @EXPORT_OK = @EXPORT;
