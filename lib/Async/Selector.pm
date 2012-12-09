@@ -135,12 +135,12 @@ sub _check {
    foreach my $res_key (keys %conditions) {
        my $input = $conditions{$res_key};
        if(!defined($self->{resources}{$res_key})) {
-           $results{$res_key} = undef;
            next;
        }
-       $results{$res_key} = $self->{resources}{$res_key}->($input);
-       if(defined($results{$res_key})) {
+       my $result = $self->{resources}{$res_key}->($input);
+       if(defined($result)) {
            $fired = 1;
+           $results{$res_key} = $result;
        }
    }
    return 0 if !$fired;
