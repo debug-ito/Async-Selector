@@ -114,6 +114,7 @@ sub checkWNum {
     $rs->set(1 => "", 2 => "aa", 3 => "bb", 4 => "cc", 5 => "dd");
     checkResult \@result, qw(1:);
     checkWatchers $s, $w;
+    ok($w->active, "w is active");
     @result = ();
     $s->trigger(1 .. $N);
     checkResult \@result, qw(1:);
@@ -122,6 +123,7 @@ sub checkWNum {
     checkResult \@result, qw(1:);
     @result = ();
     $rs->set(2 => "aaa", 3 => "bbbb", 4 => "ccccc", 5 => "dddddd");
+    ok($w->active, "w is still active");
     checkResult \@result, qw(1: 2:aaa 3:bbbb);
 
     note("--- -- if the triggered resource is not selected, the watcher callback is not executed.");
@@ -132,6 +134,7 @@ sub checkWNum {
     checkWatchers $s, $w;
     $w->cancel();
     checkWatchers $s;
+    ok(!$w->active, "w is inactive now");
 
     @result = ();
     $rs->set(map {$_ => ""} 1 .. $N);
@@ -177,11 +180,13 @@ sub checkWNum {
     $rs->set(1 => 'a');
     checkResult \@result, qw(1:a);
     checkWatchers $s, @watchers;
+    ok($_->active, "watcher active") foreach @watchers;
     $_->cancel() foreach @watchers;
     checkWatchers $s;
     @result = ();
     $rs->set(1 => 'abcde');
     checkResult \@result;
+    ok(!$_->active, "watcher inactive") foreach @watchers;
 
     note('--- -- one-shot watchers');
     @result = ();
