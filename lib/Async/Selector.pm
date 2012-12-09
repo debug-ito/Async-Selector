@@ -181,7 +181,7 @@ sub register {
    my ($self, %providers) = @_;
    my @error_keys = ();
    while(my ($key, $provider) = each(%providers)) {
-       if(!defined($provider) || !defined(ref($provider)) || ref($provider) ne 'CODE') {
+       if(!_isaCoderef($provider)) {
            push(@error_keys, $key);
        }
    }
@@ -265,11 +265,16 @@ gets available via C<trigger()> method.
 
 =cut
 
+sub _isaCoderef {
+    my ($coderef) = @_;
+    return (defined($coderef) && defined(ref($coderef)) && ref($coderef) eq "CODE");
+}
+
 sub watch_et {
     my $self = shift;
     my (%conditions, $cb);
     $cb = pop;
-    if(!defined($cb) || !defined(ref($cb)) || ref($cb) ne "CODE") {
+    if(!_isaCoderef($cb)) {
         croak "the watch callback must be a coderef.";
     }
     %conditions = @_;
@@ -295,6 +300,37 @@ sub watch_lt {
 }
 
 *watch = \&watch_lt;
+
+sub _wrapSelect {
+    my ($self, $method, $cb, %conditions) = @_;
+    if(!_isaCoderef($cb)) {
+        croak "the select callback must be a coderef.";
+    }
+    my $wrapped_cb = sub {
+        my ($w, %res) = @_;
+        foreach my $selected_resource ($w->resources) {
+            $res{$selected_resource} = undef if not exists($res{$selected_resource});
+        }
+        if($cb->("$w", %res)) {
+            $w->cancel();
+        }
+    };
+    my $watcher = $self->$method(%conditions, $wrapped_cb);
+    return $watcher->active ? "$watcher" : undef;
+}
+
+sub select_et {
+    my ($self, @args) = @_;
+    return $self->_wrapSelect('watch_et', @args);
+}
+
+sub select_lt {
+    my ($self, @args) = @_;
+    return $self->_wrapSelect('watch_lt', @args);
+}
+
+*select = \&select_lt;
+
 
 =pod
 
@@ -379,6 +415,12 @@ Returns the list of currently active selection IDs.
 sub watchers {
     my ($self) = @_;
     return values %{$self->{watchers}};
+}
+
+
+sub selections {
+    my ($self) = @_;
+    return map { "$_" } $self->watchers;
 }
 
 
