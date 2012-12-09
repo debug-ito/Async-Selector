@@ -1,4 +1,4 @@
-package Async::Selector::Selection;
+package Async::Selector::Watcher;
 use strict;
 use warnings;
 
