@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 use Carp;
-use Async::Selector::Selection;
+use Async::Selector::Watcher;
 
 
 =pod
@@ -120,23 +120,23 @@ sub new {
    my ($class) = @_;
    my $self = bless {
        resources => {},
-       selections => {},
+       watchers => {},
    }, $class;
    return $self;
 }
 
 sub _check {
-   my ($self, $selection_id_or_selection) = @_;
+   my ($self, $watcher_id_or_watcher) = @_;
    my %results = ();
    my $fired = 0;
-   my $selection;
-   if(ref($selection_id_or_selection)) {
-       $selection = $selection_id_or_selection;
+   my $watcher;
+   if(ref($watcher_id_or_watcher)) {
+       $watcher = $watcher_id_or_watcher;
    }else {
-       $selection = $self->{selections}{$selection_id_or_selection}; 
+       $watcher = $self->{watchers}{$watcher_id_or_watcher}; 
    }
-   return 0 if !defined($selection);
-   my %conditions = $selection->conditions;
+   return 0 if !defined($watcher);
+   my %conditions = $watcher->conditions;
    foreach my $res_key (keys %conditions) {
        my $input = $conditions{$res_key};
        if(!defined($self->{resources}{$res_key})) {
@@ -149,9 +149,7 @@ sub _check {
        }
    }
    return 0 if !$fired;
-   if($selection->call(%results)) {
-       $selection->cancel();
-   }
+   $watcher->call(%results);
    return 1;
 }
 
@@ -272,42 +270,40 @@ gets available via C<trigger()> method.
 
 =cut
 
-sub select_et {
+sub watch_et {
     my $self = shift;
     my (%conditions, $cb);
-    if(ref($_[0]) eq 'CODE') {
-        $cb = shift;
-    }else {
-        $cb = pop;
-    }
+    $cb = pop;
     if(!defined($cb) || !defined(ref($cb)) || ref($cb) ne "CODE") {
-        croak "the select callback must be a coderef.";
+        croak "the watch callback must be a coderef.";
     }
     %conditions = @_;
     if(!%conditions) {
         return undef;
     }
-    my $selection = Async::Selector::Selection->new(
+    my $watcher = Async::Selector::Watcher->new(
         $self, \%conditions, $cb
     );
-    $self->{selections}{"$selection"} = $selection;
-    return $selection;
+    $self->{watchers}{"$watcher"} = $watcher;
+    return $watcher;
 }
 
-sub select_lt {
+sub watch_lt {
     my ($self, @args) = @_;
-    my $selection;
-    $selection = $self->select_et(@args);
-    return undef if not defined($selection);
-    $self->_check($selection);
-    return defined($self->{selections}{"$selection"}) ? $selection : undef;
+    my $watcher;
+    $watcher = $self->watch_et(@args);
+    return undef if not defined($watcher);
+    $self->_check($watcher);
+    return defined($self->{watchers}{"$watcher"}) ? $watcher : undef;
 }
 
-*select = \&select_lt;
+*watch = \&watch_lt;
 
 =pod
 
 =head2 $selector->cancel($selection_id, ...);
+
+B<This method should be undocumented.>
 
 Cancel selections so that their callback functions won't be executed.
 
@@ -320,14 +316,14 @@ C<cancel()> method returns C<$selector> object itself.
 =cut
 
 sub cancel {
-    my ($self, @selections) = @_;
-    foreach my $s (grep { defined($_) } @selections) {
-        next if not exists $self->{selections}{"$s"};
-        $self->{selections}{"$s"}->detach();
-        delete $self->{selections}{"$s"};
+    my ($self, @watchers) = @_;
+    foreach my $w (grep { defined($_) } @watchers) {
+        next if not exists $self->{watchers}{"$w"};
+        $self->{watchers}{"$w"}->detach();
+        delete $self->{watchers}{"$w"};
     }
     ## my ($self, @ids) = @_;
-    ## delete @{$self->{selections}}{grep { defined($_) } @ids};
+    ## delete @{$self->{watchers}}{grep { defined($_) } @ids};
     return $self;
 }
 
@@ -346,19 +342,19 @@ C<trigger()> method returns C<$selector> object itself.
 
 sub trigger {
    my ($self, @resources) = @_;
-   my @affected_selections = ();
-   selec_loop: foreach my $selection (values %{$self->{selections}}) {
-         my %select_conditions = $selection->conditions;
+   my @affected_watchers = ();
+   watcher_loop: foreach my $watcher (values %{$self->{watchers}}) {
+         my %watch_conditions = $watcher->conditions;
          foreach my $res (@resources) {
            next if !defined($res);
-           if(exists($select_conditions{$res})) {
-               push(@affected_selections, $selection);
-               next selec_loop;
+           if(exists($watch_conditions{$res})) {
+               push(@affected_watchers, $watcher);
+               next watcher_loop;
            }
        }
    }
-   foreach my $selection (@affected_selections) {
-       $self->_check($selection);
+   foreach my $watcher (@affected_watchers) {
+       $self->_check($watcher);
    }
    return $self;
 }
@@ -385,9 +381,9 @@ Returns the list of currently active selection IDs.
 
 =cut
 
-sub selections {
+sub watchers {
     my ($self) = @_;
-    return values %{$self->{selections}};
+    return values %{$self->{watchers}};
 }
 
 
