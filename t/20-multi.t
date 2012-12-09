@@ -71,19 +71,21 @@ sub checkResult {
     my $s = new_ok('Async::Selector');
     my $rs = Sample::Resources->new($s, 1 .. $N);
     my @result = ();
-    $s->watch(1 => 3, 2 => 4, 3 => 2, 4 => 9, 5 => 2, collector(\@result, 1));
+    my $w = $s->watch(1 => 3, 2 => 4, 3 => 2, 4 => 9, 5 => 2, collector(\@result, 1));
+    ok($w->active, "w is active now.");
     checkResult \@result;
     $rs->set(1 => "sk", 2 => "sas", 3 => "", 4 => "abcdefgh", 5 => "Y");
     checkResult \@result;
     $rs->set(1 => "ab", 2 => "asas", 3 => "BB",               5 => "ybb");
     checkResult \@result, qw(2:asas 3:BB 5:ybb);
     checkWatchers $s;
+    ok(!$w->active, "w is fired and inactive now");
     @result = ();
     $rs->set(map {$_ => "this_is_a_long_string"} 1 .. $N);
     cmp_ok(int(@result), "==", 0, "no result because the watcher is removed.");
 
     @result = ();
-    my $w = $s->watch(1 => 0, 2 => 3, 3 => 4, collector(\@result, 0));
+    $w = $s->watch(1 => 0, 2 => 3, 3 => 4, collector(\@result, 0));
     checkResult \@result, qw(1:this_is_a_long_string 2:this_is_a_long_string 3:this_is_a_long_string);
     @result = ();
     $rs->set(1 => "", 2 => "aa", 3 => "bb", 4 => "cc", 5 => "dd");
@@ -140,6 +142,7 @@ sub checkResult {
     my @result = ();
     note('--- -- continuous watchers');
     my @watchers = ();
+    my $w;
     push @watchers, $s->watch(1 => 1, collector(\@result, 0));
     push @watchers, $s->watch(1 => 2, collector(\@result, 0));
     checkResult \@result;
@@ -165,22 +168,30 @@ sub checkResult {
 
     note('--- -- one-shot watchers');
     @result = ();
-    $s->watch(1 => 4, collector(\@result, 1));
+    $w = $s->watch(1 => 4, collector(\@result, 1));
+    ok(!$w->inactive, "immediate fire gives inactive watcher");
+    checkCond($w, [1], {1 => 4}, "inactive watcher");
     checkResult \@result, qw(1:abcde);
     checkWNum $s, 0;
-    $s->watch(1 => 6, collector(\@result, 1));
+    $w = $s->watch(1 => 6, collector(\@result, 1));
+    ok($w->active, "this is still active");
+    checkCond($w, [1], {1 => 6}, "active watcher");
     checkResult \@result, qw(1:abcde);
     checkWNum $s, 1;
-    $s->watch(1 => 7, collector(\@result, 1));
+    $w = $s->watch(1 => 7, collector(\@result, 1));
+    ok($w->active, "this is still active");
     checkResult \@result, qw(1:abcde);
     checkWNum $s, 2;
-    $s->watch(1 => 3, collector(\@result, 1));
+    $w = $s->watch(1 => 3, collector(\@result, 1));
+    ok(!$w->active, "fire immediately");
     checkResult \@result, qw(1:abcde 1:abcde);
     checkWNum $s, 2;
-    $s->watch(1 => 8, collector(\@result, 1));
+    $w = $s->watch(1 => 8, collector(\@result, 1));
+    ok($w->active, "still active");
     checkResult \@result, qw(1:abcde 1:abcde);
     checkWNum $s, 3;
-    $s->watch(1 => 9, collector(\@result, 1));
+    $w = $s->watch(1 => 9, collector(\@result, 1));
+    ok($w->active, "still active");
     checkResult \@result, qw(1:abcde 1:abcde);
     checkWNum $s, 4;
     @result = ();
@@ -207,10 +218,11 @@ sub checkResult {
     @result = ();
     @watchers = ();
     push @watchers, $s->watch(1 => 5, collector(\@result, 0));
-    $s->watch(1 => 6, collector(\@result, 1));
+    push @watchers, $s->watch(1 => 6, collector(\@result, 1));
     push @watchers, $s->watch(1 => 7, collector(\@result, 0));
-    $s->watch(1 => 8, collector(\@result, 1));
+    push @watchers, $s->watch(1 => 8, collector(\@result, 1));
     checkResult \@result;
+    checkWatchers $s, @watchers;
     @result = ();
     $rs->set(1 => "qqqq");
     checkResult \@result;
@@ -223,6 +235,7 @@ sub checkResult {
     $rs->set(1 => "eeeeee");
     checkResult \@result, qw(1:eeeeee 1:eeeeee);
     checkWNum $s, 3;
+    ok(!$watchers[1]->active, "watcher 1 fired and gets inactive.");
     @result = ();
     $rs->set(1 => "rrrrrrr");
     checkResult \@result, qw(1:rrrrrrr 1:rrrrrrr);
@@ -231,6 +244,7 @@ sub checkResult {
     $rs->set(1 => "tttttttt");
     checkResult \@result, qw(1:tttttttt 1:tttttttt 1:tttttttt);
     checkWNum $s, 2;
+    ok(!$watchers[3]->active, "watcher 3 fired and gets inactive.");
     foreach my $num (9 .. 12) {
         @result = ();
         $rs->set(1 => ("A" x $num));
@@ -263,15 +277,19 @@ sub checkResult {
     my $s = new_ok('Async::Selector');
     my $rs = Sample::Resources->new($s, 1 .. 5);
     my @result = ();
-
-    fail("Check resources and conditions for these!")
-    
-    $s->watch(1 => 5, 2 => 5, 3 => 5                , collector(\@result, 1));
-    $s->watch(        2 => 4, 3 => 4, 4 => 4        , collector(\@result, 1));
-    $s->watch(1 => 5,                 4 => 5, 5 => 5, collector(\@result, 1));
-    $s->watch(        2 => 0, 3 => 0, 4 => 3, 5 => 5, collector(\@result, 1));
-    $s->watch(1 => 2,                 4 => 5, 5 => 2, collector(\@result, 1));
-    $s->watch(        2 => 4, 3 => 4                , collector(\@result, 1));
+    my @w = ();
+    push @w, $s->watch(1 => 5, 2 => 5, 3 => 5                , collector(\@result, 1));
+    push @w, $s->watch(        2 => 4, 3 => 4, 4 => 4        , collector(\@result, 1));
+    push @w, $s->watch(1 => 5,                 4 => 5, 5 => 5, collector(\@result, 1));
+    push @w, $s->watch(        2 => 0, 3 => 0, 4 => 3, 5 => 5, collector(\@result, 1));
+    push @w, $s->watch(1 => 2,                 4 => 5, 5 => 2, collector(\@result, 1));
+    push @w, $s->watch(        2 => 4, 3 => 4                , collector(\@result, 1));
+    checkCond($w[0], [1,2,3], {1 => 5, 2 => 5, 3 => 5}, "watcher 0");
+    checkCond($w[1], [2,3,4], {2 => 4, 3 => 4, 4 => 4}, "watcher 1");
+    checkCond($w[2], [1,4,5], {1 => 5, 4 => 5, 5 => 5}, "watcher 2");
+    checkCond($w[3], [2,3,4,5], {2 => 0, 3 => 0, 4 => 3, 5 => 5}, "watcher 3");
+    checkCond($w[4], [1,4,5], {1 => 2, 4 => 5, 5 => 2}, "watcher 4");
+    checkCond($w[5], [2,3], {2 => 4, 3 => 4}, "watcher 5");
     checkResult \@result, qw(2: 3:);
     checkWNum $s, 5;
     @result = ();
