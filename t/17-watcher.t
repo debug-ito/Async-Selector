@@ -123,6 +123,19 @@ sub checkConditions {
     is(int($sa->watchers), 0);
 }
 
+{
+    note('--- new() with undef selector.');
+    my $w;
+    warning_is {
+        $w = Async::Selector::Watcher->new(
+            undef, {}, sub { fail('This should not be executed.') }
+        );
+    } undef, 'No warning when Watcher->new(undef, ...)';
+    ok(!$w->active, 'watcher is inactive');
+    warning_is { $w->cancel() } undef, '$w->cancel() is ok. It does nothing';
+    warning_is { $w->cancel() } undef, '... so you can call $w->cancel() multiple times.';
+}
+
 done_testing();
 
 
