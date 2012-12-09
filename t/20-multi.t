@@ -349,5 +349,38 @@ sub checkResult {
     checkWNum $s, 0;
 }
 
+{
+    note('--- 2 selectors with same resource names');
+    my @s = ();
+    my @r = ();
+    my @w = ();
+    my @results = ([], []);
+    foreach my $i (0 .. 1) {
+        $s[$i] = Async::Selector->new();
+        $r[$i] = Sample::Resources->new($s[$i], 1..5);
+        $w[$i] = $s[$i]->watch(2 => 2, 3 => 3, 4 => 4, 6 => 6, sub {
+            my ($w, %res) = @_;
+            is($w, $w[$i], "correct watcher");
+            push(@{$results[$i]}, map { "${i}_$_:$res{$_}" } sort {$a cmp $b} keys %res);
+            $w->cancel();
+        });
+    }
+    ok($_->active, "both active") foreach @w;
+    is_deeply(\@results, [[], []], "no results");
+    $r[0]->set(1 => "aaaaa");
+    $r[1]->set(5 => "eeeee");
+    ok($_->active, "both active") foreach @w;
+    is_deeply(\@results, [[], []], "still no results");
+    $r[0]->set(3 => "cccc", 4 => "dddd");
+    $r[1]->set(2 => "b", 4 => "ddd");
+    ok(!$w[0]->active, "w0 fired");
+    ok($w[1]->active, "w1 still active");
+    is_deeply(\@results, [['0_3:cccc', '0_4:dddd'], []]);
+    $r[0]->set(2 => "bbbbbbb");
+    $r[1]->set(2 => "bbbbbbb");
+    ok(!$w[1]->active, "w1 fired");
+    is_deeply(\@results, [['0_3:cccc', '0_4:dddd'], ['1_2:bbbbbbb']]);
+}
+
 done_testing();
 
