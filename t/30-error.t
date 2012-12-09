@@ -248,4 +248,25 @@ sub catter {
     is_deeply(\@result, [10, 20], 'both fired');
 }
 
+{
+    note('--- registered(junk)');
+    my $s = Async::Selector->new();
+    $s->register('' => sub {10}, a => sub {20}, 3 => sub {30});
+    my $ret;
+    foreach my $arg ('', 'a', 3) {
+        warning_is { $ret = $s->registered($arg) } undef, "no warning for '$arg', of course";
+        ok($ret, "'$arg' is registered");
+    }
+    warning_like { $ret = $s->registered(undef) } undef, "no warning for undef.";
+    ok(!$ret, "undef is not registered");
+    warning_is { $ret = $s->registered([]) } undef, "no warning for arrayref.";
+    ok(!$ret, "arrayref is not registered");
+    warning_is { $ret = $s->registered({}) } undef, "no warning for hashref.";
+    ok(!$ret, "hashref is not registered");
+    warning_is { $ret = $s->registered(sub {}) } undef, "no warning for coderef.";
+    ok(!$ret, "coderef is not registered");
+    warning_is { $ret = $s->registered() } undef, "no warning for no argument";
+    ok(!$ret, "returns false for no argument.");
+}
+
 done_testing();

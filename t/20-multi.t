@@ -105,6 +105,14 @@ sub checkResult {
 }
 
 {
+    note('--- N-resource, registered()');
+    my $s = new_ok('Async::Selector');
+    my $rs = Async::Selector::Sample::Resources->new($s, 1 .. 10);
+    ok( $s->registered($_), "$_ is registered") foreach (1..10);
+    ok(!$s->registered($_), "$_ is not registered") foreach (0, 11..15);
+}
+
+{
     note('--- N-resource, 1-watch.');
     my $N = 5;
     my $s = new_ok('Async::Selector');

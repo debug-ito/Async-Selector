@@ -395,6 +395,12 @@ sub resources {
     return keys %{$self->{resources}};
 }
 
+sub registered {
+    my ($self, $resource_name) = @_;
+    return 0 if not defined($resource_name);
+    return exists $self->{resources}{$resource_name};
+}
+
 
 =pod
 

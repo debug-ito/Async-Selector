@@ -25,6 +25,9 @@ is($s->register(
 
 cmp_ok(int($s->resources), "==", 1, "one resource registered.");
 is(($s->resources)[0], 'a', '... and its name is "a".');
+ok($s->registered('a'), 'a is registered');
+ok(!$s->registered('b'), 'b is not registered');
+ok(!$s->registered('A'), 'A is not registered');
 
 my @result = ();
 {
@@ -220,6 +223,7 @@ my @result = ();
 note("--- unregister()");
 is($s->unregister('a'), $s, "unregister() returns the object.");
 cmp_ok(int($s->resources), '==', 0, "now no resource is registered.");
+ok(!$s->registered('a'), 'a is not registered anymore');
 
 done_testing();
 
