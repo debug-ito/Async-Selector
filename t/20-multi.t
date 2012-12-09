@@ -66,6 +66,45 @@ sub checkResult {
 }
 
 {
+    note('--- N-resource: resources in watcher callback should only have keys for available resource.');
+    my $s = new_ok('Async::Selector');
+    my $rs = Sample::Resources->new($s, 1 .. 5);
+    my $fired = 0;
+    my $w;
+    $w = $s->watch(1 => 0, 2 => 5, 4 => 2, sub {
+        my ($watcher, %res) = @_;
+        $fired = 1;
+        checkCond($watcher, [1,2,4], {1=>0, 2=>5, 4=>2}, "watcher in callback");
+        is($res{1}, "", "got resource 1");
+        ok(!exists($res{$_}), "No key for resource $_") foreach 2..5;
+        $watcher->cancel();
+    });
+    ok($fired, "watcher fired.");
+    ok(!$w->active, "watcher fired.");
+    
+    $fired = 0;
+    $w = $s->watch(3 => 3, 4 => 4, 5 => 5, 6 => 6, sub {
+        my ($watcher, %res) = @_;
+        $fired = 1;
+        is($watcher, $w, '$watcher is actually $w.');
+        checkCond($watcher, [3,4,5,6], {3=>3, 4=>4, 5=>5, 6=>6}, "watcher in callback");
+        is($res{3}, "cccc", "got resource 3");
+        is($res{4}, "dddd", "got resource 4");
+        ok(!exists($res{$_}), "No key for resource $_") foreach (1,2,5,6);
+    });
+    ok(!$fired, "not yet fired");
+    ok($w->active);
+    $rs->set(1 => 'aaaa', 2 => 'bbbb', 3 => 'cccc', 4 => "dddd", 5 => "eeee");
+    ok($fired, "fired");
+    ok($w->active);
+    $w->cancel();
+    $fired = 0;
+    ok(!$w->active);
+    $rs->set(1 => 'aaaaaa', 2 => 'bbbbbb', 3 => 'cccccc', 4 => "dddddd", 5 => "eeeeee");
+    ok(!$fired, "not fired because already canceled");
+}
+
+{
     note('--- N-resource, 1-watch.');
     my $N = 5;
     my $s = new_ok('Async::Selector');
