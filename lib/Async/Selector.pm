@@ -129,12 +129,7 @@ sub _check {
    my ($self, $watcher_id_or_watcher) = @_;
    my %results = ();
    my $fired = 0;
-   my $watcher;
-   if(ref($watcher_id_or_watcher)) {
-       $watcher = $watcher_id_or_watcher;
-   }else {
-       $watcher = $self->{watchers}{$watcher_id_or_watcher}; 
-   }
+   my $watcher = $self->{watchers}{"$watcher_id_or_watcher"};
    return 0 if !defined($watcher);
    my %conditions = $watcher->conditions;
    foreach my $res_key (keys %conditions) {
@@ -279,7 +274,9 @@ sub watch_et {
     }
     %conditions = @_;
     if(!%conditions) {
-        return undef;
+        return Async::Selector::Watcher->new(
+            undef, \%conditions, $cb
+        );
     }
     my $watcher = Async::Selector::Watcher->new(
         $self, \%conditions, $cb
@@ -292,9 +289,9 @@ sub watch_lt {
     my ($self, @args) = @_;
     my $watcher;
     $watcher = $self->watch_et(@args);
-    return undef if not defined($watcher);
+    return $watcher if !$watcher->active;
     $self->_check($watcher);
-    return defined($self->{watchers}{"$watcher"}) ? $watcher : undef;
+    return $watcher;
 }
 
 *watch = \&watch_lt;
@@ -322,8 +319,6 @@ sub cancel {
         $self->{watchers}{"$w"}->detach();
         delete $self->{watchers}{"$w"};
     }
-    ## my ($self, @ids) = @_;
-    ## delete @{$self->{watchers}}{grep { defined($_) } @ids};
     return $self;
 }
 
