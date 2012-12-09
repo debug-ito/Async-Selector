@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
+use Test::Builder;
 use Test::Warn;
 
 BEGIN {
@@ -53,25 +54,25 @@ BEGIN {
     ok(!$w->active, 'empty watch should return an inactive watcher.');
 }
 
-sub checkConditions {
+sub testConditions {
     my ($s, $watch_args, $exp_res, $exp_cond, $case) = @_;
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
     my $w = $s->watch(@$watch_args);
-    is_deeply([sort {$a cmp $b} $w->resources], $exp_res, $case . ': resources()');
-    is_deeply({$w->condition}, $exp_cond, $case . ': condition()');
+    checkCond($w, $exp_res, $exp_cond, $case);
 }
 
 {
     note('--- condition() and resources() methods.');
     my $s = Async::Selector->new();
     my $failcb = sub { fail('This should not be executed.') };
-    checkConditions($s, [a => 10, $failcb], ['a'], {a => 10}, "watch 1 resource");
+    testConditions($s, [a => 10, $failcb], ['a'], {a => 10}, "watch 1 resource");
     my $cond_array = [qw(x y z)];
-    checkConditions(
+    testConditions(
         $s, [b => 'foobar', c => 992.5, a => $cond_array, $failcb],
         [qw(a b c)], { a => $cond_array, b => 'foobar', c => 992.5 },
         'watch 3 resources'
     );
-    checkConditions($s, [$failcb], [], {}, "empty watch")
+    testConditions($s, [$failcb], [], {}, "empty watch")
 }
 
 {

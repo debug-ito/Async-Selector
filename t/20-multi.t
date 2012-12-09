@@ -4,6 +4,11 @@ use Test::More;
 use Test::Builder;
 use List::Util qw(first);
 
+use FindBin;
+use lib "$FindBin::RealBin/lib";
+use Async::Selector::testutils;
+
+
 package Sample::Resources;
 use strict;
 use warnings;
@@ -54,41 +59,11 @@ sub collector {
     };
 }
 
-sub checkArray {
-    my ($label, $result_ref, @exp_list) = @_;
-    local $Test::Builder::Level = $Test::Builder::Level + 1;
-    cmp_ok(int(@$result_ref), "==", int(@exp_list), sprintf("$label num == %d", int(@exp_list)));
-    my @result = @$result_ref;
-    foreach my $exp_str (@exp_list) {
-        my $found_index = first { $result[$_] eq $exp_str } 0..$#result;
-        ok(defined($found_index), "$label includes $exp_str");
-        my @new_result = ();
-        foreach my $i (0 .. $#result) {
-            push @new_result, $result[$i] if $i != $found_index;
-        }
-        @result = @new_result;
-    }
-    cmp_ok(int(@result), "==", 0, "checked all $label");
-}
-
 sub checkResult {
     my ($result_ref, @exp_list) = @_;
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     checkArray('result', $result_ref, @exp_list);
 }
-
-sub checkWatchers {
-    my ($selector, @exp_list) = @_;
-    local $Test::Builder::Level = $Test::Builder::Level + 1;
-    checkArray('watchers', [$selector->watchers], @exp_list);
-}
-
-sub checkWNum {
-    my ($selector, $watcher_num) = @_;
-    local $Test::Builder::Level = $Test::Builder::Level + 1;
-    is(int($selector->watchers), $watcher_num, "$watcher_num watchers.");
-}
-
 
 {
     note('--- N-resource, 1-watch.');

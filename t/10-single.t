@@ -1,20 +1,15 @@
-
 use strict;
 use warnings;
 use Test::More;
+
+use FindBin;
+use lib "$FindBin::RealBin/lib";
+use Async::Selector::testutils;
 
 note("Test for 1-resource 1-watcher.");
 
 BEGIN {
     use_ok('Async::Selector');
-}
-
-sub checkCond {
-    my ($w, $exp_res, $exp_cond, $case) = @_;
-    local $Test::Builder::Level = $Test::Builder::Level + 1;
-    $case ||= "";
-    is_deeply([sort {$a cmp $b} $w->resources], $exp_res, $case . ': resources()');
-    is_deeply({$w->conditions}, $exp_cond, $case . ': conditions()');
 }
 
 my $s = new_ok('Async::Selector');

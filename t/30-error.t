@@ -6,6 +6,11 @@ use Test::Warn;
 use Test::Exception;
 use Async::Selector;
 
+use FindBin;
+use lib "$FindBin::RealBin/lib";
+use Async::Selector::testutils;
+
+
 note('Test for erroneous situations.');
 
 sub catter {
@@ -18,19 +23,6 @@ sub catter {
         }
     };
 }
-
-sub checkWNum {
-    my ($selector, $watcher_num) = @_;
-    local $Test::Builder::Level = $Test::Builder::Level + 1;
-    is(int($selector->watchers), $watcher_num, "$watcher_num watchers.");
-}
-
-sub checkRNum {
-    my ($selector, $resource_num) = @_;
-    local $Test::Builder::Level = $Test::Builder::Level + 1;
-    is(int($selector->resources), $resource_num, "$resource_num resources.");
-}
-
 
 {
     note('--- watch() non-existent resource');
