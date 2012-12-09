@@ -33,6 +33,18 @@ BEGIN {
     is(int(@result), 1, "1 result...");
     is($result[0], 10, '... and it is 10');
 
+    note('--- -- immediate');
+    @result = ();
+    $w = $s->watch(a => 5, sub {
+        my ($w, %res) = @_;
+        push(@result, $res{a});
+        $w->cancel();
+    });
+    is($result[0], 10, 'immediate fire');
+    is(int($s->watchers), 0, 'no watcher');
+    isa_ok($w, 'Async::Selector::Watcher', 'even in the immediate fire case, watch() should return a Watcher');
+    ok(!$w->active, '... and it is inactive.');
+
     note('--- -- empty watch');
     $w = $s->watch(sub {
         fail('This should not be executed.');
@@ -77,78 +89,6 @@ sub checkConditions {
 }
 
 {
-    note('--- $selector->cancel($watcher)');
-    note('    This form is supported for backward compatibility. $watcher->cancel() is favored.');
-
-    my $s = Async::Selector->new();
-    my $res = 0;
-    $s->register(a => sub {
-        my $in = shift;
-        return $res >= $in ? $res : undef;
-    });
-
-    note("--- -- LT select, non-remove, not immediate.");
-    my $w = $s->watch(a => 10, sub {
-        my ($r, %res) = @_;
-        fail("This should not be executed.");
-        return 0;
-    });
-    isa_ok($w, 'Async::Selector::Watcher');
-    is(int($s->watchers), 1, "1 watcher.");
-    is($s->cancel($w), $s, "cancel() returns Selector object.");
-    is(int($s->watchers), 0, "0 watcher.");
-
-    note("--- -- LT select, non-remove, immediate.");
-    my @result = ();
-    $w = $s->watch(a => -10, sub {
-        my ($r, %res) = @_;
-        push(@result, $res{a});
-        return 0;
-    });
-    isa_ok($w, 'Async::Selector::Watcher');
-    is(int(@result), 1, "Immediate watch.");
-    is($result[0], 0, "The result is obtained.");
-    $s->cancel($w);
-    is(int($s->watchers), 0, "No pending watcher");
-    @result = ();
-    $s->trigger('a');
-    $s->trigger('a');
-    is(int(@result), 0, "No result obtained because no pending watcher.");
-
-    note("--- -- N-resources, 1-watch cancel.");
-    $s = Async::Selector->new();
-    foreach my $res_id (1 .. 5) {
-        $s->register($res_id => sub {
-            my $in = shift;
-            return $res_id >= $in ? $res_id : undef;
-        });
-    }
-    $w = $s->watch(1 => 5, 2 => 6, 5 => 7, sub {
-        my ($r, %res) = @_;
-        fail("This should not be executed.");
-    });
-    isa_ok($w, 'Async::Selector::Watcher');
-    is(int($s->watchers), 1, "1 pending watchers.");
-    $s->cancel($w);
-    is(int($s->watchers), 0, "0 pending watchers.");
-
-    note('--- -- 1-resource,  M-watchers cancel.');
-    $s = Async::Selector->new();
-    $s->register(a => sub { undef });
-    my @ws = ();
-    foreach my $threshold (1 .. 10) {
-        push(@ws, $s->watch(a => $threshold, sub {
-            fail('This should not be executed.');
-        }));
-    }
-    is(int($s->watchers), 10, "10 pending watchers");
-    $s->cancel(@ws[2,4,5,8]);
-    is(int($s->watchers), 6, "6 pending watchers");
-    $s->cancel($s->watchers);
-    is(int($s->watchers), 0, "0 pending watchers");
-}
-
-{
     note('--- cancel() multiple times on the same Watcher.');
     my $s = Async::Selector->new();
     my $w = $s->watch(a => 10, sub {
@@ -162,37 +102,6 @@ sub checkConditions {
     is(int($s->watchers), 0, '0 pending watcher.');
     warning_is { $w->cancel() } undef, 'calling cancel() multiple times is ok.';
 }
-
-{
-    note('--- $selector->cancel($request_in_other_selector)');
-    my $sa = Async::Selector->new();
-    my $sb = Async::Selector->new();
-    my $wa = $sa->watch(a => 10, sub {
-        fail('This should not be executed.');
-    });
-    isa_ok($wa, 'Async::Selector::Watcher');
-    my $wb = $sb->watch(b => 10, sub {
-        fail('This should not be executed.');
-    });
-    isa_ok($wb, 'Async::Selector::Watcher');
-    is(int($sa->watchers), 1, '1 watcher in $sa');
-    is(int($sb->watchers), 1, '1 watcher in $sb');
-    ok($wa->active, '$wa is active');
-    ok($wb->active, '$wb is active');
-    warning_is { $sa->cancel($wb) } undef, 'No warning';
-    warning_is { $sb->cancel($wa) } undef, 'No warning';
-    is(int($sa->watchers), 1, 'Still 1 watcher in $sa');
-    is(int($sb->watchers), 1, 'Still 1 watcher in $sb');
-    ok($wa->active, '$wa is still active');
-    ok($wb->active, '$wb is still active');
-    $sa->cancel($wa);
-    $sb->cancel($wb);
-    is(int($sa->watchers), 0, '0 watcher in $sa');
-    is(int($sb->watchers), 0, '0 watcher in $sb');
-    ok(!$wa->active, '$wa is inactive');
-    ok(!$wb->active, '$wb is inactive');
-}
-
 
 done_testing();
 
