@@ -373,18 +373,10 @@ C<trigger()> method returns C<$selector> object itself.
 
 sub trigger {
    my ($self, @resources) = @_;
-   my @affected_watchers = ();
-   watcher_loop: foreach my $watcher (values %{$self->{watchers}}) {
-         my %watch_conditions = $watcher->conditions;
-         foreach my $res (@resources) {
-           next if !defined($res);
-           if(exists($watch_conditions{$res})) {
-               push(@affected_watchers, $watcher);
-               next watcher_loop;
-           }
-       }
+   if(!@resources) {
+       return $self;
    }
-   foreach my $watcher (@affected_watchers) {
+   foreach my $watcher ($self->watchers(@resources)) {
        $self->_check($watcher);
    }
    return $self;
@@ -413,8 +405,22 @@ Returns the list of currently active selection IDs.
 =cut
 
 sub watchers {
-    my ($self) = @_;
-    return values %{$self->{watchers}};
+    my ($self, @resources) = @_;
+    if(!@resources) {
+        return values %{$self->{watchers}};
+    }
+    my @affected_watchers = ();
+  watcher_loop: foreach my $watcher (values %{$self->{watchers}}) {
+        my %watch_conditions = $watcher->conditions;
+        foreach my $res (@resources) {
+            next if !defined($res);
+            if(exists($watch_conditions{$res})) {
+                push(@affected_watchers, $watcher);
+                next watcher_loop;
+            }
+        }
+    }
+    return @affected_watchers;
 }
 
 
