@@ -8,7 +8,7 @@ use lib "$FindBin::RealBin/lib";
 use Async::Selector::testutils;
 
 
-package Sample::Resources;
+package Async::Selector::Sample::Resources;
 use strict;
 use warnings;
 
@@ -67,7 +67,7 @@ sub checkResult {
 {
     note('--- N-resource: resources in watcher callback should only have keys for available resource.');
     my $s = new_ok('Async::Selector');
-    my $rs = Sample::Resources->new($s, 1 .. 5);
+    my $rs = Async::Selector::Sample::Resources->new($s, 1 .. 5);
     my $fired = 0;
     my $w;
     $w = $s->watch(1 => 0, 2 => 5, 4 => 2, sub {
@@ -108,7 +108,7 @@ sub checkResult {
     note('--- N-resource, 1-watch.');
     my $N = 5;
     my $s = new_ok('Async::Selector');
-    my $rs = Sample::Resources->new($s, 1 .. $N);
+    my $rs = Async::Selector::Sample::Resources->new($s, 1 .. $N);
     my @result = ();
     my $w = $s->watch(1 => 3, 2 => 4, 3 => 2, 4 => 9, 5 => 2, collector(\@result, 1));
     ok($w->active, "w is active now.");
@@ -177,7 +177,7 @@ sub checkResult {
 {
     note('--- 1-resource, M-watchers');
     my $s = new_ok('Async::Selector');
-    my $rs = Sample::Resources->new($s, 1);
+    my $rs = Async::Selector::Sample::Resources->new($s, 1);
     my @result = ();
     note('--- -- continuous watchers');
     my @watchers = ();
@@ -314,7 +314,7 @@ sub checkResult {
 {
     note('--- N-resource, M-watchers');
     my $s = new_ok('Async::Selector');
-    my $rs = Sample::Resources->new($s, 1 .. 5);
+    my $rs = Async::Selector::Sample::Resources->new($s, 1 .. 5);
     my @result = ();
     my @w = ();
     push @w, $s->watch(1 => 5, 2 => 5, 3 => 5                , collector(\@result, 1));
@@ -357,7 +357,7 @@ sub checkResult {
     my @results = ([], []);
     foreach my $i (0 .. 1) {
         $s[$i] = Async::Selector->new();
-        $r[$i] = Sample::Resources->new($s[$i], 1..5);
+        $r[$i] = Async::Selector::Sample::Resources->new($s[$i], 1..5);
         $w[$i] = $s[$i]->watch(2 => 2, 3 => 3, 4 => 4, 6 => 6, sub {
             my ($w, %res) = @_;
             is($w, $w[$i], "correct watcher");
