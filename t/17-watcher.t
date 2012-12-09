@@ -103,6 +103,26 @@ sub checkConditions {
     warning_is { $w->cancel() } undef, 'calling cancel() multiple times is ok.';
 }
 
+{
+    note('--- cancel() while two Selectors exist');
+    my $sa = Async::Selector->new();
+    my $sb = Async::Selector->new();
+    my @w = (
+        map { $sa->watch(a => 10, sub { fail('sa: this should not be executed') }) } 1..5,
+        map { $sb->watch(a => 10, sub { fail('sb: this should not be executed') }) } 1..5,
+    );
+    is(int($sa->watchers), 5);
+    is(int($sb->watchers), 5);
+    $w[$_]->cancel() foreach (0, 4, 6, 7, 9);
+    is(int($sa->watchers), 3);
+    is(int($sb->watchers), 2);
+    $w[$_]->cancel() foreach (2, 3, 5, 8);
+    is(int($sa->watchers), 1);
+    is(int($sb->watchers), 0);
+    $w[1]->cancel();
+    is(int($sa->watchers), 0);
+}
+
 done_testing();
 
 
