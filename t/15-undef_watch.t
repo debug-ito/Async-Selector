@@ -19,9 +19,9 @@ my $fired = 0;
 $s->watch(a => undef, b => undef, c => undef, sub {
     my ($w, %res) = @_;
     $fired = 1;
-    ok(!defined($res{a}), 'a is not ready');
+    ok(!exists($res{a}), 'a is not ready');
     is($res{b}, "B", 'b is ready');
-    ok(!defined($res{c}), 'c is not ready');
+    ok(!exists($res{c}), 'c is not ready');
     $w->cancel();
 });
 is($fired, 1, 'watcher fired immediately');
@@ -31,9 +31,9 @@ $fired = 0;
 $s->watch_et(a => undef, b => undef, c => undef, sub {
     my ($w, %res) = @_;
     $fired = 1;
-    ok(!defined($res{a}), 'a is not ready');
+    ok(!exists($res{a}), 'a is not ready');
     is($res{b}, "B", 'b is ready');
-    ok(!defined($res{c}), 'c is not ready');
+    ok(!exists($res{c}), 'c is not ready');
     $w->cancel();
 });
 is($fired, 0, 'watcher not fired because its ET');
@@ -47,7 +47,7 @@ $s->watch(a => '', b => 0, c => '', sub {
     my ($w, %res) = @_;
     $fired = 1;
     is($res{a}, "A", 'a is ready');
-    ok(!defined($res{b}), 'b is not ready');
+    ok(!exists($res{b}), 'b is not ready');
     is($res{c}, "C", 'c is ready');
     $w->cancel();
 });
@@ -55,11 +55,11 @@ is($fired, 1, 'watcher fired immediately');
 is(int($s->watchers), 0, "no watcher");
 
 $fired = 0;
-$s->watcher_et(a => '', b => 0, c => '', sub {
+$s->watch_et(a => '', b => 0, c => '', sub {
     my ($w, %res) = @_;
     $fired = 1;
     is($res{a}, "A", 'a is ready');
-    ok(!defined($res{b}), 'b is not ready');
+    ok(!exists($res{b}), 'b is not ready');
     is($res{c}, "C", 'c is ready');
     $w->cancel();
 });
