@@ -5,7 +5,7 @@ use Async::Selector;
 
 
 {
-    ## Multiple resources, multiple selections
+    ## Multiple resources, multiple watches
     
     my $selector = Async::Selector->new();
     my $a = 5;
@@ -16,20 +16,19 @@ use Async::Selector;
         b => sub { my $t = shift; return $b >= $t ? $b : undef },
         c => sub { my $t = shift; return $c >= $t ? $c : undef },
     );
-    $selector->select(a => 10, sub {
-        my ($id, %res) = @_;
+    $selector->watch(a => 10, sub {
+        my ($watcher, %res) = @_;
         print "Select 1: a is $res{a}\n";
-        return 1;
+        $watcher->cancel();
     });
-    $selector->select(
+    $selector->watch(
         a => 12, b => 15, c => 15,
         sub {
-            my ($id, %res) = @_;
+            my ($watcher, %res) = @_;
             foreach my $key (sort keys %res) {
-                next if not defined($res{$key});
                 print "Select 2: $key is $res{$key}\n";
             }
-            return 1;
+            $watcher->cancel();
         }
     );
 
@@ -44,7 +43,7 @@ use Async::Selector;
 print "==============\n";
 
 {
-    ## Auto-cancel and non-cancel selections
+    ## one-shot and persistent watches
     my $selector = Async::Selector->new();
     my $A = "";
     my $B = "";
@@ -53,33 +52,33 @@ print "==============\n";
         B => sub { my $in = shift; return length($B) >= $in ? $B : undef },
     );
 
-    my $sel_a = $selector->select(A => 5, sub {
-        my ($id, %res) = @_;
+    my $watcher_a = $selector->watch(A => 5, sub {
+        my ($watcher, %res) = @_;
         print "A: $res{A}\n";
-        return 1; ## auto-cancel
+        $watcher->cancel(); ## one-shot callback
     });
-    my $sel_b = $selector->select(B => 5, sub {
-        my ($id, %res) = @_;
+    my $watcher_b = $selector->watch(B => 5, sub {
+        my ($watcher, %res) = @_;
         print "B: $res{B}\n";
-        return 0; ## non-cancel
+        ## persistent callback
     });
 
     ## Trigger the resources.
-    ## Execution order of selection callbacks is not guaranteed.
+    ## Execution order of watcher callbacks is not guaranteed.
     ($A, $B) = ('aaaaa', 'bbbbb');
     $selector->trigger('A', 'B');   ## -> B: bbbbb
                                     ## -> A: aaaaa
     print "--------\n";
-    ## $sel_a is automatically canceled.
+    ## $watcher_a is already canceled.
     ($A, $B) = ('AAAAA', 'BBBBB');
     $selector->trigger('A', 'B');   ## -> B: BBBBB
     print "--------\n";
 
     $B = "CCCCCCC";
-    $selector->trigger('A', 'B');        ## -> B: CCCCCCC
+    $selector->trigger('A', 'B');   ## -> B: CCCCCCC
     print "--------\n";
 
-    $selector->cancel($sel_b);
+    $watcher_b->cancel();
     $selector->trigger('A', 'B');        ## Nothing happens.
 }
 

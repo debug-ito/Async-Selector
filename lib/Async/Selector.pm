@@ -29,8 +29,6 @@ our $VERSION = "1.01";
 =head1 SYNOPSIS
 
 
-    ----- TODO: UPDATE SYNOPSIS -----
-
     use Async::Selector;
     
     my $selector = Async::Selector->new();
@@ -44,13 +42,13 @@ our $VERSION = "1.01";
     });
     
     
-    ## Select the resource with a callback.
-    $selector->select(
-        resource_A => 20,  ## Tell me when the resource gets more than 20 bytes!
-        sub {
-            my ($id, %resource) = @_;
+    ## Watch the resource with a callback.
+    $selector->watch(
+        resource_A => 20,  ## When the resource gets more than 20 bytes...
+        sub {              ## ... execute this callback.
+            my ($watcher, %resource) = @_;
             print "$resource{resource_A}\n";
-            return 1;
+            $watcher->cancel();
         }
     );
     
@@ -61,7 +59,6 @@ our $VERSION = "1.01";
     
     $resource .= "more data";  ## 23 bytes
     $selector->trigger('resource_A'); ## The callback prints 'some text.datamore data'
-
 
 
 =head1 DESCRIPTION
@@ -447,12 +444,12 @@ sub selections {
 
 =head1 EXAMPLES
 
-=head2 Multiple resources, multiple selections
+=head2 Multiple resources, multiple watches
 
 You can register multiple resources with a single L<Async::Selector>
-object.  You can select multiple resources with a single call of
-C<select()> method.  If you select multiple resources, the callback is
-executed when any of the selected resources is available.
+object.  You can watch multiple resources with a single call of
+C<watch()> method.  If you watch multiple resources, the callback is
+executed when any of the watched resources is available.
 
 
     my $selector = Async::Selector->new();
@@ -464,23 +461,22 @@ executed when any of the selected resources is available.
         b => sub { my $t = shift; return $b >= $t ? $b : undef },
         c => sub { my $t = shift; return $c >= $t ? $c : undef },
     );
-    $selector->select(a => 10, sub {
-        my ($id, %res) = @_;
+    $selector->watch(a => 10, sub {
+        my ($watcher, %res) = @_;
         print "Select 1: a is $res{a}\n";
-        return 1;
+        $watcher->cancel();
     });
-    $selector->select(
+    $selector->watch(
         a => 12, b => 15, c => 15,
         sub {
-            my ($id, %res) = @_;
+            my ($watcher, %res) = @_;
             foreach my $key (sort keys %res) {
-                next if not defined($res{$key});
                 print "Select 2: $key is $res{$key}\n";
             }
-            return 1;
+            $watcher->cancel();
         }
     );
-    
+
     ($a, $b, $c) = (11, 14, 14);
     $selector->trigger(qw(a b c));  ## -> Select 1: a is 11
     print "---------\n";
@@ -490,12 +486,15 @@ executed when any of the selected resources is available.
 
 
 
-=head2 Auto-cancel and non-cancel selections
 
-In the callback function for C<select()> method, the selection is
-automatically canceled from the L<Async::Selector> object if you
-return true.  The selection remains in the L<Async::Selector> object
-if you return false.
+=head2 One-shot and persistent watches
+
+The watchers are persistent by default, that is, they remain in the
+L<Async::Selector> object no matter how many times their callbacks
+are executed.
+
+If you want to execute your callback just one time, call C<< $watcher->cancel() >>
+in the callback.
 
 
     my $selector = Async::Selector->new();
@@ -505,37 +504,35 @@ if you return false.
         A => sub { my $in = shift; return length($A) >= $in ? $A : undef },
         B => sub { my $in = shift; return length($B) >= $in ? $B : undef },
     );
-    
-    my $sel_a = $selector->select(A => 5, sub {
-        my ($id, %res) = @_;
+
+    my $watcher_a = $selector->watch(A => 5, sub {
+        my ($watcher, %res) = @_;
         print "A: $res{A}\n";
-        return 1; ## auto-cancel
+        $watcher->cancel(); ## one-shot callback
     });
-    my $sel_b = $selector->select(B => 5, sub {
-        my ($id, %res) = @_;
+    my $watcher_b = $selector->watch(B => 5, sub {
+        my ($watcher, %res) = @_;
         print "B: $res{B}\n";
-        return 0; ## non-cancel
+        ## persistent callback
     });
-    
+
     ## Trigger the resources.
-    ## Execution order of selection callbacks is not guaranteed.
+    ## Execution order of watcher callbacks is not guaranteed.
     ($A, $B) = ('aaaaa', 'bbbbb');
     $selector->trigger('A', 'B');   ## -> B: bbbbb
                                     ## -> A: aaaaa
     print "--------\n";
-    ## $sel_a is automatically canceled.
+    ## $watcher_a is already canceled.
     ($A, $B) = ('AAAAA', 'BBBBB');
     $selector->trigger('A', 'B');   ## -> B: BBBBB
     print "--------\n";
-    
+
     $B = "CCCCCCC";
-    $selector->trigger('A', 'B');        ## -> B: CCCCCCC
+    $selector->trigger('A', 'B');   ## -> B: CCCCCCC
     print "--------\n";
-    
-    $selector->cancel($sel_b);
+
+    $watcher_b->cancel();
     $selector->trigger('A', 'B');        ## Nothing happens.
-
-
 
 
 =head2 Real-time Web: Comet (long-polling) and WebSocket
