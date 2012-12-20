@@ -444,6 +444,48 @@ sub selections {
 
 =head1 EXAMPLES
 
+=head2 Level-triggered vs. edge-triggered
+
+Watchers created by C<watch()> and C<watch_lt()> methods are level-triggered.
+This means their callbacks can be immediately executed if some of the watched resources
+are already available.
+
+Watchers created by C<watch_et()> method are edge-triggered.
+This means their callbacks are never executed when C<watch_et()> is called.
+
+Both level-triggered and edge-triggered watcher callbacks are executed
+when some of the watched resources are C<trigger()>-ed AND available.
+
+
+    my $selector = Async::Selector->new();
+    my $a = 10;
+    $selector->register(a => sub { my $t = shift; return $a >= $t ? $a : undef });
+
+    ## Level-triggered watch
+    $selector->watch_lt(a => 5, sub { ## => LT: 10
+        my ($watcher, %res) = @_;
+        print "LT: $res{a}\n";
+    });
+    $selector->trigger('a');          ## => LT: 10
+    $a = 12;
+    $selector->trigger('a');          ## => LT: 12
+    $a = 3;
+    $selector->trigger('a');          ## Nothing happens because $a == 3 < 5.
+
+    ## Edge-triggered watch
+    $selector->watch_et(a => 2, sub { ## Nothing happens because it's edge-triggered
+        my ($watcher, %res) = @_;
+        print "ET: $res{a}\n";
+    });
+    $selector->trigger('a');          ## => ET: 3
+    $a = 0;
+    $selector->trigger('a');          ## Nothing happens.
+    $a = 10;
+    $selector->trigger('a');          ## => LT: 10
+                                      ## => ET: 10
+
+
+
 =head2 Multiple resources, multiple watches
 
 You can register multiple resources with a single L<Async::Selector>
@@ -542,6 +584,11 @@ Web.  Resource registered with an L<Async::Selector> object can be
 pushed to Web browsers via Comet (long-polling) and/or WebSocket.
 
 See L<Async::Selector::Example::Mojo> for detail.
+
+
+
+B<TODO_write COMPATIBILITY>
+
 
 
 =head1 SEE ALSO

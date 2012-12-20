@@ -3,6 +3,38 @@ use warnings;
 
 use Async::Selector;
 
+{
+    ## Level-triggered vs. Edge-triggered
+    
+    my $selector = Async::Selector->new();
+    my $a = 10;
+    $selector->register(a => sub { my $t = shift; return $a >= $t ? $a : undef });
+
+    ## Level-triggered watch
+    $selector->watch_lt(a => 5, sub { ## => LT: 10
+        my ($watcher, %res) = @_;
+        print "LT: $res{a}\n";
+    });
+    $selector->trigger('a');          ## => LT: 10
+    $a = 12;
+    $selector->trigger('a');          ## => LT: 12
+    $a = 3;
+    $selector->trigger('a');          ## Nothing happens because $a == 3 < 5.
+
+    ## Edge-triggered watch
+    $selector->watch_et(a => 2, sub { ## Nothing happens because it's edge-triggered
+        my ($watcher, %res) = @_;
+        print "ET: $res{a}\n";
+    });
+    $selector->trigger('a');          ## => ET: 3
+    $a = 0;
+    $selector->trigger('a');          ## Nothing happens.
+    $a = 10;
+    $selector->trigger('a');          ## => LT: 10
+                                      ## => ET: 10
+}
+
+print "=================\n";
 
 {
     ## Multiple resources, multiple watches
@@ -43,7 +75,7 @@ use Async::Selector;
 print "==============\n";
 
 {
-    ## one-shot and persistent watches
+    ## One-shot and persistent watches
     my $selector = Async::Selector->new();
     my $A = "";
     my $B = "";
