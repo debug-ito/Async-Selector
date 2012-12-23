@@ -262,8 +262,8 @@ This method is just like C<watch()> method but it emulates edge-triggered watch.
 
 To emulate edge-triggered behavior, C<watch_et()> won't execute
 the C<$callback> immediately even if some of the watched resources are available.
-The C<$callback> is executed only when C<trigger()> method is called on some of the
-watched resources and some of the triggered resources are available.
+The C<$callback> is executed only when C<trigger()> method is called on
+resources that are watched and available.
 
 
 =cut
@@ -455,7 +455,7 @@ This means their callbacks can be immediately executed if some of the watched re
 are already available.
 
 Watchers created by C<watch_et()> method are edge-triggered.
-This means their callbacks are never executed when C<watch_et()> is called.
+This means their callbacks are never executed at the moment C<watch_et()> is called.
 
 Both level-triggered and edge-triggered watcher callbacks are executed
 when some of the watched resources are C<trigger()>-ed AND available.
@@ -588,9 +588,84 @@ pushed to Web browsers via Comet (long-polling) and/or WebSocket.
 See L<Async::Selector::Example::Mojo> for detail.
 
 
+=head1 COMPATIBILITY
 
-B<TODO_write COMPATIBILITY>
+The following methods that existed in L<Async::Selector> v0.02 or older are supported but not recommended
+in this version.
 
+=over
+
+=item *
+
+C<select()>
+
+=item *
+
+C<select_lt()>
+
+=item *
+
+C<select_et()>
+
+=item *
+
+C<selections()>
+
+=item *
+
+C<cancel()>
+
+=back
+
+Currently the C<watch> methods are substituted for the C<select> methods.
+
+The differences between C<watch> and C<select> methods are as follows.
+
+=over
+
+=item *
+
+C<watch> methods take the watcher callback from the last argument, while C<select> methods
+take it from the first argument.
+
+
+=item *
+
+C<watch> methods return L<Async::Selector::Watcher> objects, while C<select> methods
+return selection IDs, which are strings.
+
+=item *
+
+The callback function for C<watch> receives L<Async::Selector::Watcher> object from the
+first argument, while the callback for C<select> receives the selection ID.
+
+=item *
+
+The second argument for the callback function is also different.
+
+For C<watch> methods, it is a hash of resources that are watched, triggered and available.
+For C<select> methods, it is a hash of all the watched resources with values
+for unavailable resources being C<undef>.
+
+=item *
+
+Return values from the callback function for C<watch> methods are ignored,
+while those for C<select> methods are used to automatically cancel the selection.
+
+
+=item *
+
+C<trigger()> method executes the callback for C<watch> methods when it triggers resources
+that are watched and available.
+
+On the other hand, C<trigger()> method executes the callback for C<select> when it triggers
+resources that are watched, and some of the watched resources are available.
+So if you trigger an unavailable watched resource and don't trigger any available watched resource,
+the C<select> callback is executed with available resources even though they are not triggered.
+
+
+
+=back
 
 
 =head1 SEE ALSO
