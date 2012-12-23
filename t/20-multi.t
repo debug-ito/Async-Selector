@@ -144,11 +144,11 @@ sub checkResult {
     checkResult \@result, qw(1:);
     @result = ();
     $s->trigger(3);
-    checkResult \@result, qw(1:);
+    checkResult \@result;
     @result = ();
     $rs->set(2 => "aaa", 3 => "bbbb", 4 => "ccccc", 5 => "dddddd");
     ok($w->active, "w is still active");
-    checkResult \@result, qw(1: 2:aaa 3:bbbb);
+    checkResult \@result, qw(2:aaa 3:bbbb);
 
     note("--- -- if the triggered resource is not selected, the watcher callback is not executed.");
     @result = ();

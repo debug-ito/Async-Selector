@@ -8,6 +8,7 @@ sub new {
         selector => $selector,
         conditions => $conditions,
         cb => $cb,
+        check_all => 0,
     }, $class;
 }
 
@@ -19,6 +20,16 @@ sub call {
 sub detach {
     my ($self) = @_;
     $self->{selector} = undef;
+}
+
+sub getCheckAll {
+    my ($self) = @_;
+    return $self->{check_all};
+}
+
+sub setCheckAll {
+    my ($self, $check_all) = @_;
+    $self->{check_all} = $check_all;
 }
 
 sub cancel {

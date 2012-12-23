@@ -125,17 +125,20 @@ sub new {
 }
 
 sub _check {
-   my ($self, $watcher_id_or_watcher) = @_;
+   my ($self, $watcher_id_or_watcher, @triggers) = @_;
    my %results = ();
    my $fired = 0;
    my $watcher = $self->{watchers}{"$watcher_id_or_watcher"};
    return 0 if !defined($watcher);
    my %conditions = $watcher->conditions;
-   foreach my $res_key (keys %conditions) {
+   if($watcher->getCheckAll) {
+       @triggers = $watcher->resources;
+   }
+   foreach my $res_key (@triggers) {
+       next if not defined $res_key;
+       next if not exists($conditions{$res_key});
+       next if not defined($self->{resources}{$res_key});
        my $input = $conditions{$res_key};
-       if(!defined($self->{resources}{$res_key})) {
-           next;
-       }
        my $result = $self->{resources}{$res_key}->($input);
        if(defined($result)) {
            $fired = 1;
@@ -295,7 +298,7 @@ sub watch_lt {
     my $watcher;
     $watcher = $self->watch_et(@args);
     return $watcher if !$watcher->active;
-    $self->_check($watcher);
+    $self->_check($watcher, $watcher->resources);
     return $watcher;
 }
 
@@ -316,6 +319,7 @@ sub _wrapSelect {
         }
     };
     my $watcher = $self->$method(%conditions, $wrapped_cb);
+    $watcher->setCheckAll(1);
     return $watcher->active ? "$watcher" : undef;
 }
 
@@ -363,7 +367,7 @@ sub trigger {
        return $self;
    }
    foreach my $watcher ($self->watchers(@resources)) {
-       $self->_check($watcher);
+       $self->_check($watcher, @resources);
    }
    return $self;
 }
