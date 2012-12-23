@@ -565,8 +565,8 @@ in the callback.
     ## Trigger the resources.
     ## Execution order of watcher callbacks is not guaranteed.
     ($A, $B) = ('aaaaa', 'bbbbb');
-    $selector->trigger('A', 'B');   ## -> B: bbbbb
-                                    ## -> A: aaaaa
+    $selector->trigger('A', 'B');   ## -> A: aaaaa
+                                    ## -> B: bbbbb
     print "--------\n";
     ## $watcher_a is already canceled.
     ($A, $B) = ('AAAAA', 'BBBBB');
