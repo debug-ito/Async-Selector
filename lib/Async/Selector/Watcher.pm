@@ -1,15 +1,18 @@
 package Async::Selector::Watcher;
 use strict;
 use warnings;
+use Scalar::Util qw(weaken);
 
 sub new {
     my ($class, $selector, $conditions, $cb) = @_;
-    return bless {
+    my $self = bless {
         selector => $selector,
         conditions => $conditions,
         cb => $cb,
         check_all => 0,
     }, $class;
+    weaken($self->{selector});
+    return $self;
 }
 
 sub call {

@@ -14,6 +14,7 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Carp' => 0,
+        'Scalar::Util' => 0,
     },
     BUILD_REQUIRES => {
         'Test::More' => 0,
