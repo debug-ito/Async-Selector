@@ -10,6 +10,7 @@ my $selector = Async::Selector->new();
 my $resource = "some text.";  ## 10 bytes
 
 $selector->register(resource_A => sub {
+    ## If $resource has more data than $threshold bytes, provide it.
     my $threshold = shift;
     return length($resource) >= $threshold ? $resource : undef;
 });

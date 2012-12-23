@@ -37,6 +37,7 @@ our $VERSION = "1.01";
     my $resource = "some text.";  ## 10 bytes
     
     $selector->register(resource_A => sub {
+        ## If $resource has more data than $threshold bytes, provide it.
         my $threshold = shift;
         return length($resource) >= $threshold ? $resource : undef;
     });
@@ -96,8 +97,7 @@ That's because L<Async::Selector> is level-triggered.
 
 Notify the L<Async::Selector> object by C<trigger()> method that some of the registered resources have changed.
 
-
-The L<Async::Selector> object then checks if any of the watched resources gets available.
+The L<Async::Selector> object then checks if any of the triggered resources gets available.
 If some resources become available, the callback function given by C<watch()> method is executed.
 
 
@@ -225,7 +225,7 @@ A watch is described as pairs of resource names and condition inputs for the res
 C<$name> is the resource name that you want to watch. It is the name given in C<register()> method.
 
 C<$condition_input> describes the condition the resource has to meet to be considered as "available".
-C<$condition_input> is an arbitrary scalar, and it's interpretation is up to the resource provider.
+C<$condition_input> is an arbitrary scalar, and its interpretation is up to the resource provider.
 
 You can list as many C<< $name => condition_input >> pairs as you like.
 
@@ -263,7 +263,7 @@ This method is just like C<watch()> method but it emulates edge-triggered watch.
 To emulate edge-triggered behavior, C<watch_et()> won't execute
 the C<$callback> immediately even if some of the watched resources are available.
 The C<$callback> is executed only when C<trigger()> method is called on some of the
-watched resources and some of them are available.
+watched resources and some of the triggered resources are available.
 
 
 =cut
@@ -529,8 +529,6 @@ executed when any of the watched resources is available.
     ($a, $b, $c) = (12, 14, 20);
     $selector->trigger(qw(a b c));  ## -> Select 2: a is 12
                                     ## -> Select 2: c is 20
-
-
 
 
 =head2 One-shot and persistent watches
