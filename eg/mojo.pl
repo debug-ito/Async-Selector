@@ -92,8 +92,8 @@ $(function() {
             .done(function(data) {
                 data = data.split(" ");
                 my_sequence = data[0];
-                $('#comet_sequence').html(data[0]);
-                $('#comet_resource').html(data[1]);
+                $('#comet_sequence').text(data[0]);
+                $('#comet_resource').text(data[1]);
                 sendCometRequest();
             })
             .fail(function() {
@@ -107,8 +107,8 @@ $(function() {
         var ws = new WebSocket("<%= url_for('websocket')->to_abs %>");
         ws.onmessage = function(event) {
             var data = event.data.split(" ");
-            $('#websocket_sequence').html(data[0]);
-            $('#websocket_resource').html(data[1]);
+            $('#websocket_sequence').text(data[0]);
+            $('#websocket_resource').text(data[1]);
         };
         ws.onclose = function() {
             setTimeout(connectWebsocket, RECONNECT_BACKOFF);

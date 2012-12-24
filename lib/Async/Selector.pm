@@ -246,7 +246,7 @@ The watcher created by C<watch()> method is persistent in nature, i.e., it remai
 and C<$callback> can be executed repeatedly. To cancel the watcher and release the C<$callback>,
 call C<< $watcher->cancel() >> method.
 
-If no resource selection (C<$name> => C<$condition_input> pair) is specified,
+If no resource selection (C<< $name => $condition_input >> pair) is specified,
 C<watch()> method silently ignores it.
 As a result, it returns a C<$watcher> object which is already canceled and inactive.
 
@@ -642,7 +642,6 @@ first argument, while the callback for C<select> receives the selection ID.
 =item *
 
 The second argument for the callback function is also different.
-
 For C<watch> methods, it is a hash of resources that are watched, triggered and available.
 For C<select> methods, it is a hash of all the watched resources with values
 for unavailable resources being C<undef>.
@@ -657,7 +656,6 @@ while those for C<select> methods are used to automatically cancel the selection
 
 C<trigger()> method executes the callback for C<watch> methods when it triggers resources
 that are watched and available.
-
 On the other hand, C<trigger()> method executes the callback for C<select> when it triggers
 resources that are watched, and some of the watched resources are available.
 So if you trigger an unavailable watched resource and don't trigger any available watched resource,
