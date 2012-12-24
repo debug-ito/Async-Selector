@@ -37,7 +37,7 @@ our $VERSION = "1.01";
     my $resource = "some text.";  ## 10 bytes
     
     $selector->register(resource_A => sub {
-        ## If $resource has more data than $threshold bytes, provide it.
+        ## If length of $resource is more than or equal to $threshold bytes, provide it.
         my $threshold = shift;
         return length($resource) >= $threshold ? $resource : undef;
     });
