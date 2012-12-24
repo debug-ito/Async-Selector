@@ -7,12 +7,12 @@ Async::Selector::Example::Mojo - Example of using Async::Selector for real-time 
 
 This example shows how L<Async::Selector> can be used to build a
 so-called real-time Web application. An L<Async::Selector> object is
-attached to a piece of resource in the Model layer (in MVC sense), and
-its events are published via both Comet (long-polling) and
-WebSocket. This example uses L<Mojolicious::Lite> for a Web
-application framework because of its great support for real-time
-Web. However you can use L<Async::Selector> with any framework because
-it completely belongs to the Model layer.
+attached to a piece of resource, and its events are published via both
+Comet (long-polling) and WebSocket. This example uses
+L<Mojolicious::Lite> for a Web application framework because of its
+great support for real-time Web. However you can use
+L<Async::Selector> with any framework that supports real-time transaction
+somehow.
 
 
 =head1 CODE
@@ -67,30 +67,29 @@ The code is available as C<eg/mojo.pl> in the L<Async::Selector> distribution pa
         get '/comet' => sub {
             my $self = shift;
             my $client_sequence = $self->param('seq');
-            my $selection_id = $selector->select(sub {
-                my ($id, %resources) = @_;
+            my $watcher = $selector->watch(res => $client_sequence, sub {
+                my ($w, %resources) = @_;
                 my ($resource, $sequence)
                     = ($resources{res}{resource}, $resources{res}{sequence});
                 $self->render_data("$sequence $resource");
-                return 1;           ## long-polling is not persistent
-            }, res => $client_sequence);
+                $w->cancel();
+            });
             $self->on(finish => sub {
-                $selector->cancel($selection_id);
+                $watcher->cancel();
             });
         };
     
         websocket '/websocket' => sub {
             my $self = shift;
             Mojo::IOLoop->stream($self->tx->connection)->timeout(0);
-            my $selection_id = $selector->select(sub {
-                my ($id, %resources) = @_;
+            my $watcher = $selector->watch(res => 0, sub {
+                my ($w, %resources) = @_;
                 my ($resource, $sequence)
                     = ($resources{res}{resource}, $resources{res}{sequence});
                 $self->send("$sequence $resource");
-                return 0;           ## websocket is persistent
-            }, res => 0);
+            });
             $self->on(finish => sub {
-                $selector->cancel($selection_id);
+                $watcher->cancel();
             });
         };
     
@@ -156,6 +155,7 @@ The code is available as C<eg/mojo.pl> in the L<Async::Selector> distribution pa
     </html>
 
 
+
 =head1 USAGE
 
 =over
@@ -179,6 +179,13 @@ Run C<mojo.pl>.
 
 Access C<http://localhost:3000/> from Web browsers.
 
+=item 5.
+
+You will see two random sequences of characters displayed in textareas,
+both of which represent the same resource.
+
+One of the two sequences is updated periodically using Comet (long-polling),
+while the other using WebSocket.
 
 =back
 
@@ -186,10 +193,10 @@ Access C<http://localhost:3000/> from Web browsers.
 =head1 DESCRIPTION
 
 The code above consists of three parts, the resource part, the HTTP
-part and the HTML/Javascript part. In the MVC paradigm, they
-correspond to the Model, Control and View layers, respectively.
+part and the HTML/Javascript part.
 
-=head2 Resource Part (Model)
+
+=head2 Resource Part
 
 The resource part sets up the resource (C<$resource>) and its
 L<Async::Selector> object (C<$selector>).  In this example,
@@ -212,10 +219,10 @@ When C<$resource> is updated, C<trigger()> method is called on
 C<$selector> to notify the clients of the update.
 
 
-=head2 HTTP Part (Control)
+=head2 HTTP Part
 
 In the HTTP part, the events from C<$selector> are exported to Web
-browsers via both Comet (long-polling) and WebSocket. You might have
+browsers via Comet (long-polling) and WebSocket. You might have
 to check out L<Mojolicious::Lite> documentation if you are not
 familiar with it.
 
@@ -227,45 +234,44 @@ point for Comet (long-polling).
 
 C</comet> path accepts a query parameter C<seq>, which is supposed to
 be the sequence number the Web browser currently has.  We pass the
-content of C<seq> to C<select()> method on C<$selector> object. That
+content of C<seq> to C<watch()> method on C<$selector> object. That
 way, the response is deferred until the C<$sequence> on the server
 side is higher than C<$client_sequence> given by the browser.
 
 When C<$sequence> on the server side is higher than
-C<$client_sequence>, the callback function given to C<select()> is
+C<$client_sequence>, the callback function given to C<watch()> is
 called with C<$resource> and C<$sequence>. We encode these values in a
 single string separated by a space, and send it to the browser.
 
 The comet request is not persistent, i.e. a session is finished after
-the server sends a response. That is why the callback function for the
-C<select()> method returns 1. This cancels the selection after it
-sends the resource to the Web browser.
+the server sends a response. That is why we call C<< $w->cancel() >>
+at the end of the callback function.
 
 Finally, we set up the request path for C</websocket>, which accepts
 WebSocket connections. We use L<Mojo::IOLoop> to set the connection's
 timeout to 0 (infinite).
 
-Unlike C</comet>, we call C<select()> method on C<$selector> with the
+Unlike C</comet>, we call C<watch()> method on C<$selector> with the
 condition input of 0. There are two reasons for this.
 
 One reason is that we want to send the C<$resource> as soon as the
 WebSocket connection is established, so that the C<$resource> can be
 immediately rendered in the HTML page. Because C<$sequence> is always
 greater than 0, the C<$resource> is immediately provided to the
-callback function for C<select()> method. We don't have to wait for
+callback function for C<watch()> method. Thus we don't have to wait for
 the first update of the C<$resource>.
 
 The other reason is that WebSocket connections are persistent.  For
-persistent connections, we can let C<$selector> call the callback
+persistent connections, we can let C<$selector> execute the callback
 function every time the C<$resource> is C<trigger()>-ed.
 
-Because WebSocket connections are persistent, we return 0 in the
-callback function for the C<select()> method.  That way, the selection
+Because WebSocket connections are persistent, we don't call C<< $w->cancel() >>
+in the callback function. That way, the selection
 remains after sending a message to the Web browser.
 
 
 
-=head2 HTML/Javascript Part (View)
+=head2 HTML/Javascript Part
 
 HTML/Javascript part is an HTML text for Web browsers to render.
 It contains a Javascript program using jQuery (L<http://jquery.com/>).
