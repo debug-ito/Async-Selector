@@ -17,11 +17,11 @@ Async::Selector - level-triggered resource observer like select(2)
 
 =head1 VERSION
 
-1.01
+1.011
 
 =cut
 
-our $VERSION = "1.01";
+our $VERSION = "1.011";
 
 
 =pod
@@ -45,7 +45,7 @@ our $VERSION = "1.01";
     
     ## Watch the resource with a callback.
     $selector->watch(
-        resource_A => 20,  ## When the resource gets more than 20 bytes...
+        resource_A => 20,  ## When the resource gets more than or equal to 20 bytes...
         sub {              ## ... execute this callback.
             my ($watcher, %resource) = @_;
             print "$resource{resource_A}\n";

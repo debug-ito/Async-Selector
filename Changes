@@ -1,5 +1,9 @@
 Revision history for Async-Selector
 
+1.011   2012/12/24
+        Minor fixes in POD.
+
+
 1.01    2012/12/24
         select(), select_lt(), select_et(), selections(), cancel() methods
         are now deprecated (but can be used to maintain compatibility).
