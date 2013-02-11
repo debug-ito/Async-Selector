@@ -5,7 +5,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME                => 'Async::Selector',
-    AUTHOR              => q{Toshio Ito <debug.ito@gmail.com>},
+    AUTHOR              => q{Toshio Ito <toshioito@cpan.org>},
     VERSION_FROM        => 'lib/Async/Selector.pm',
     ABSTRACT_FROM       => 'lib/Async/Selector.pm',
     ($ExtUtils::MakeMaker::VERSION >= 6.3002
