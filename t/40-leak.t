@@ -3,6 +3,7 @@ use warnings;
 use Test::Builder;
 use Test::More;
 use Async::Selector;
+use Test::Memory::Cycle;
 
 
 note('--- test for memory leak');
@@ -48,6 +49,7 @@ checkCount(1,0);
     my $s = Async::Selector->new();
     my $w = $s->watch(a => 1, sub {});
     checkCount(0,0);
+    memory_cycle_ok($s, "no cyclic ref in selector");
     $w->cancel();
     checkCount(0,0);
 }
@@ -57,6 +59,7 @@ checkCount(1,1);
     resetCount();
     my $s = Async::Selector->new();
     $s->watch(a => 1, sub {});
+    memory_cycle_ok($s, "no cyclic ref in selector");
     checkCount(0,0);
 }
 checkCount(1,1);
@@ -69,6 +72,7 @@ checkCount(1,1);
         $w = $s->watch(a => 1, sub {});
         checkCount(0,0);
         ok($w->active, "w is active");
+        memory_cycle_ok($s, "no cyclic ref in selector");
     }
     checkCount(1,0);
     ok(!$w->active, "w is inactive because selector is destroyed");
@@ -83,6 +87,7 @@ checkCount(1,1);
         $w = $s->watch(a => 1, sub {});
         my $x = $s->watch(a => 1, sub {});
         checkCount(0,0);
+        memory_cycle_ok($s, "no cyclic ref in selector");
     }
     checkCount(1,1);
     ok(!$w->active, "w is inactive because selector is destroyed");
