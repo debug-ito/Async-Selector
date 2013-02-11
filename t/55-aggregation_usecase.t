@@ -54,7 +54,9 @@ my $watcher = aggregate_watch(a => 3, b => 0, sub {
     $w->cancel;
 });
 
-$watcher->active;  ## Returns false in this case
+## In this case, the callback is called immediately and $w->cancel is called.
+
+$watcher->active;  ## => false
 
 #################################
 

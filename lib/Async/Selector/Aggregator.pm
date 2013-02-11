@@ -59,9 +59,60 @@ our $VERSION = '1.02';
 
 Async::Selector::Aggregator - aggregator of watchers and other aggregators
 
+=head1 VERSION
+
+1.02
+
 =head1 SYNOPSIS
 
-    Write SYNOPSIS!!
+
+    use Async::Selector;
+    use Async::Selector::Aggregator;
+    
+    ## Setup resources with 3 selectors, each of which registers 'resource'
+    my %resources = (
+        a => { val => 0, selector => Async::Selector->new },
+        b => { val => 0, selector => Async::Selector->new },
+        c => { val => 0, selector => Async::Selector->new },
+    );
+    foreach my $res (values %resources) {
+        $res->{selector}->register(resource => sub {
+            my ($threshold) = @_;
+            return $res->{val} >= $threshold ? $res->{val} : undef;
+        });
+    }
+    
+    ## Aggregate 3 selectors into one. Resource names are now ('a', 'b', 'c')
+    sub aggregate_watch {
+        my $callback = pop;
+        my %watch_spec = @_;
+        my $aggregator = Async::Selector::Aggregator->new();
+        foreach my $key (keys %watch_spec) {
+            my $watcher = $resources{$key}{selector}->watch(
+                resource => $watch_spec{$key}, sub {
+                    my ($w, %res) = @_;
+                    $callback->($aggregator, $key => $res{resource});
+                }
+            );
+            $aggregator->add($watcher);
+            last if !$aggregator->active;
+        }
+        return $aggregator;
+    }
+    
+    ## Treat 3 selectors like a single selector almost transparently.
+    ## $w and $watcher are actually an Async::Selector::Aggregator.
+    my $watcher = aggregate_watch(a => 3, b => 0, sub {
+        my ($w, %res) = @_;
+        handle_a($res{a}) if exists $res{a};
+        handle_b($res{b}) if exists $res{b};
+        $w->cancel;
+    });
+    
+    ## In this case, the callback is called immediately and $w->cancel is called.
+    
+    $watcher->active;  ## => false
+
 
 =head1 DESCRIPTION
 
@@ -108,8 +159,8 @@ Returns true if the C<$aggregator> is active. Returns false otherwise.
 
 =head2 $aggregator->cancel()
 
-Cancels the C<$aggregator>, that is, change its state into inactive.
-It also cancels all watchers kept in the C<$aggregator>.
+Cancels the C<$aggregator>, that is, changes its state into inactive.
+This method also cancels all watchers kept in the C<$aggregator>.
 
 
 =head1 AUTHOR
