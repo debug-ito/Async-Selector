@@ -59,13 +59,19 @@ sub active {
     return defined($self->{selector});
 }
 
+our $VERSION = '1.011';
+
 1;
 
 =pod
 
 =head1 NAME
 
-Async::Selector::Watcher - Representation of resource watch in Async::Selector
+Async::Selector::Watcher - representation of resource watch in Async::Selector
+
+=head1 VERSION
+
+1.011
 
 =head1 SYNOPSIS
 
@@ -128,7 +134,7 @@ Note that watchers are automatically canceled and become inactive when their par
 
 =head2 $watcher->cancel();
 
-Cancel the watch.
+Cancels the watch.
 
 The C<$watcher> then becomes inactive and is removed from the L<Async::Selector> object it used to belong to.
 
@@ -153,7 +159,7 @@ L<Async::Selector>
 
 =head1 AUTHOR
 
-Toshio Ito, C<< <debug.ito at gmail.com> >>
+Toshio Ito, C<< <toshioito at cpan.org> >>
 
 =head1 LICENSE AND COPYRIGHT
 
