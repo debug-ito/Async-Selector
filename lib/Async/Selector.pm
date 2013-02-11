@@ -17,11 +17,11 @@ Async::Selector - level-triggered resource observer like select(2)
 
 =head1 VERSION
 
-1.011
+1.02
 
 =cut
 
-our $VERSION = "1.011";
+our $VERSION = "1.02";
 
 
 =pod
