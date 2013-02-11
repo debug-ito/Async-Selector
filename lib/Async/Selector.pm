@@ -716,7 +716,7 @@ L<http://search.cpan.org/dist/Async-Selector/>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2012 Toshio Ito.
+Copyright 2012-2013 Toshio Ito.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
