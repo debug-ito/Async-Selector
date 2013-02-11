@@ -2,6 +2,7 @@ package Async::Selector::Watcher;
 use strict;
 use warnings;
 use Scalar::Util qw(weaken);
+use Carp;
 
 sub new {
     my ($class, $selector, $conditions, $cb) = @_;
@@ -17,6 +18,9 @@ sub new {
 
 sub call {
     my ($self) = @_;
+    if(not defined($self->{cb})) {
+        confess("call() method is called but cb is undef. Maybe the watcher is unexpectedly cancelled.")
+    }
     return $self->{cb}->(@_);
 }
 
@@ -41,6 +45,7 @@ sub cancel {
     my $selector = $self->{selector};
     $self->detach();
     $selector->cancel($self);
+    $self->{cb} = undef;
     return $self;
 }
 
