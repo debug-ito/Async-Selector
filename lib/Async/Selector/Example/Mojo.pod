@@ -316,6 +316,6 @@ persistent connection.
 
 =head1 AUTHOR
 
-Toshio Ito, C<< <debug.ito at gmail.com> >>
+Toshio Ito, C<< <toshioito at cpan.org> >>
 
 

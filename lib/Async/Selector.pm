@@ -673,7 +673,7 @@ L<Event::Notify>, L<Notification::Center>
 
 =head1 AUTHOR
 
-Toshio Ito, C<< <debug.ito at gmail.com> >>
+Toshio Ito, C<< <toshioito at cpan.org> >>
 
 =head1 BUGS
 
