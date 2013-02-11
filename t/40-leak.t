@@ -94,6 +94,19 @@ checkCount(1,1);
 }
 checkCount(1,2);
 
+{
+    resetCount();
+    my $s = Async::Selector->new();
+    my $w;
+    $w = $s->watch(a => 1, sub {
+        undef $w;
+    });
+    memory_cycle_exists($w, "cyclic ref because of the closure");
+    $w->cancel();
+    memory_cycle_ok($w, "there is no cyclic ref because cancel() releases the closure");
+}
+checkCount(1,1);
+
 done_testing();
 
 
