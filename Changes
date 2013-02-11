@@ -1,5 +1,18 @@
 Revision history for Async-Selector
 
+1.02    2013/02/11
+        Add Async::Selector::Aggregator module.
+        This module aggregates multiple watchers and treats them
+        as a single watcher. The aggregator can cancel all its watchers
+        at once.
+
+        Add Test::Memory::Cycle to build-requires. Cyclic references
+        are tested with it.
+
+        Async::Selector::Watcher now undefs its callback when cancel()ed.
+        This greatly reduces the risk of cyclic references and memory leak.
+        
+
 1.011   2012/12/24
         Minor fixes in POD.
 
