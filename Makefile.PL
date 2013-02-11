@@ -22,6 +22,7 @@ WriteMakefile(
         'Test::Warn' => 0,
         'Test::Exception' => 0,
         'FindBin' => 0,
+        'Test::Memory::Cycle' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Async-Selector-*' },

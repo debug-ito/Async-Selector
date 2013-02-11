@@ -7,7 +7,8 @@ use Carp;
 sub new {
     my ($class) = @_;
     my $self = bless {
-        watchers => []
+        is_active => 1,
+        watchers => [],
     }, $class;
     return $self;
 }
@@ -37,15 +38,12 @@ sub watchers {
 
 sub active {
     my ($self) = @_;
-    foreach my $w ($self->watchers) {
-        my $r = $w->active;
-        return $r if !$r;
-    }
-    return 1;
+    return $self->{is_active};
 }
 
 sub cancel {
     my ($self) = @_;
+    $self->{is_active} = 0;
     foreach my $w ($self->watchers) {
         $w->cancel();
     }
@@ -84,6 +82,8 @@ You should not C<cancel> individual watchers once you aggregate them into an L<A
 
 Creates a new L<Async::Selector::Aggregator> object. It takes no argument.
 
+A newly created aggregator is active.
+
 =head1 OBJECT METHODS
 
 =head2 $aggregator->add($watcher)
@@ -105,12 +105,11 @@ Returns the list of all watchers kept in the C<$aggregator>.
 
 Returns true if the C<$aggregator> is active. Returns false otherwise.
 
-The C<$aggregator> is active when all watchers kept in it are active.
-If there is no watcher in the C<$aggregator>, it returns true.
 
 =head2 $aggregator->cancel()
 
-Cancels all watchers kept in the C<$aggregator>.
+Cancels the C<$aggregator>, that is, change its state into inactive.
+It also cancels all watchers kept in the C<$aggregator>.
 
 
 =head1 AUTHOR

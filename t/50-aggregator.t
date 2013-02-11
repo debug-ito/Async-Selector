@@ -14,6 +14,7 @@ use Test::More;
 use Test::Exception;
 use Async::Selector;
 use Carp;
+use Test::Memory::Cycle;
 
 BEGIN {
     use_ok('Async::Selector::Aggregator');
@@ -51,6 +52,7 @@ sub test_pure_children {
         ok($agg->active, 'agg is active');
         is_deeply([$agg->watchers], \@watchers, 'watchers OK');
         is(scalar($selector->watchers), 3, "3 active watchers in selector");
+        memory_cycle_ok($agg, "no cyclic ref in agg");
         $agg->cancel();
         foreach my $i (0 .. $#watchers) {
             ok(!$watchers[$i]->active, "watcher $i is inactive");
@@ -80,7 +82,7 @@ sub test_pure_children {
     }
     {
         my $agg = new_ok('Async::Selector::Aggregator');
-        ok($agg->active, "agg is active when it's empty");
+        ok($agg->active, "agg is active at first");
         my $selector = create_selector();
         my @watchers = ();
         my $new_watcher = create_child($selector, $child_type);
@@ -89,7 +91,7 @@ sub test_pure_children {
         push(@watchers, $new_watcher);
         $agg->add($new_watcher);
         ok(!$new_watcher->active, 'new_watcher is inactive');
-        ok(!$agg->active, 'agg becomes inactive because of adding an inactive watcher');
+        ok(!$agg->active, 'agg becomes inactive because an inactive watcher is added');
         is_deeply([$agg->watchers], \@watchers, 'watchers OK');
         is(scalar($selector->watchers), 0, '0 active watchers');
 
@@ -131,9 +133,26 @@ sub test_pure_children {
         foreach my $i (0 .. $#watchers) {
             ok(!$watchers[$i]->active, "watcher $i is inactive");
         }
-        ok(!$agg->active, "agg becomes inactive because of adding an inactive watcher");
+        ok(!$agg->active, "agg becomes inactive because an inactive watcher is added.");
         is_deeply([$agg->watchers], \@watchers, "watchers OK");
         is(scalar($selector->watchers), 0, "0 active watcher");
+    }
+
+    {
+        my $selector = create_selector();
+        my $agg = new_ok('Async::Selector::Aggregator');
+        ok($agg->active, 'agg is active at first');
+        $agg->cancel();
+        ok(!$agg->active, 'agg becomes inactive although there is no watchers in it');
+        my @watchers = ();
+        my $new_watcher = create_child($selector, $child_type);
+        ok($new_watcher->active, 'new_watcher is active');
+        is(scalar($selector->watchers), 1, '1 active watcher');
+        push(@watchers, $new_watcher);
+        $agg->add($new_watcher);
+        ok(!$new_watcher->active, 'new_watcher becomes inactive because it is added to an inactive aggregator');
+        is_deeply([$agg->watchers], \@watchers, 'watchers OK');
+        is(scalar($selector->watchers), 0, '0 active watcher');
     }
 }
 
@@ -144,14 +163,16 @@ sub test_pure_children {
 {
     my $agg = new_ok('Async::Selector::Aggregator');
     ok($agg->active, "agg is active when it's empty");
+    dies_ok { $agg->add($agg) } "it croaks when you try to add the agg itself.";
     $agg->cancel;
-    ok($agg->active, "agg is still active after cancel() when it's empty");
+    ok(!$agg->active, "agg becomes inactive after cancel() even when it's empty");
     dies_ok { $agg->add($agg) } "it croaks when you try to add the agg itself.";
 }
 
 test_pure_children('watcher');
 test_pure_children('aggregator');
 
+note("--- junk tests");
 foreach my $case (
     {label => "undef", junk => undef},
     {label => "number", junk => 10},
@@ -221,7 +242,6 @@ foreach my $case (
     ok(!$new_agg->active, 'new_agg becomes inactive because it is added to an inactive aggregator');
     is(scalar($selector->watchers), 0, '0 active watchers');
 }
-
 
 done_testing();
 
