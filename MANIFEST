@@ -4,6 +4,7 @@ eg/mojo.pl
 eg/synopsis.pl
 eg/watcher_synopsis.pl
 lib/Async/Selector.pm
+lib/Async/Selector/Aggregator.pm
 lib/Async/Selector/Example/Mojo.pod
 lib/Async/Selector/Watcher.pm
 Makefile.PL
@@ -18,10 +19,12 @@ t/19-fire.t
 t/20-multi.t
 t/30-error.t
 t/40-leak.t
+t/50-aggregator.t
+t/55-aggregation_usecase.t
 t/lib/Async/Selector/testutils.pm
-t/manifest.t
-t/pod.t
 t/v00-10-single.t
 t/v00-15-undef_select.t
 t/v00-20-multi.t
 t/v00-30-error.t
+xt/manifest.t
+xt/pod.t
