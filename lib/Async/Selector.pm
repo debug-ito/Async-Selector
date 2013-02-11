@@ -581,8 +581,8 @@ in the callback.
 =head2 Watcher aggregator
 
 Sometimes you might want to use multiple L<Async::Selector> objects
-and watch their resources at the same time.
-In this case, L<Async::Selector::Aggregator> can be used to aggregate
+and watch their resources simultaneously.
+In this case, you can use L<Async::Selector::Aggregator> to aggregate
 watchers produced by L<Async::Selector> objects.
 See L<Async::Selector::Aggregator> for details.
 
