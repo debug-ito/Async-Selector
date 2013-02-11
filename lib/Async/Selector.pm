@@ -576,7 +576,43 @@ in the callback.
     print "--------\n";
 
     $watcher_b->cancel();
-    $selector->trigger('A', 'B');        ## Nothing happens.
+    $selector->trigger('A', 'B');   ## Nothing happens.
+
+=head2 Watcher aggregator
+
+Sometimes you might want to use multiple L<Async::Selector> objects
+and watch their resources at the same time.
+In this case, L<Async::Selector::Aggregator> can be used to aggregate
+watchers produced by L<Async::Selector> objects.
+See L<Async::Selector::Aggregator> for details.
+
+    my $selector_a = Async::Selector->new();
+    my $selector_b = Async::Selector->new();
+    my $A = "";
+    my $B = "";
+    $selector_a->register(resource => sub { my $in = shift; return length($A) >= $in ? $A : undef });
+    $selector_b->register(resource => sub { my $in = shift; return length($B) >= $in ? $B : undef });
+    
+    my $watcher_a = $selector_a->watch(resource => 5, sub {
+        my ($watcher, %res) = @_;
+        print "A: $res{resource}\n";
+    });
+    my $watcher_b = $selector_b->watch(resource => 5, sub {
+        my ($watcher, %res) = @_;
+        print "B: $res{resource}\n";
+    });
+    
+    ## Aggregates the two watchers into $aggregator
+    my $aggregator = Async::Selector::Aggregator->new();
+    $aggregator->add($watcher_a);
+    $aggregator->add($watcher_b);
+    
+    ## This cancels both $watcher_a and $watcher_b
+    $aggregator->cancel();
+    
+    print("watcher_a: " . ($watcher_a->active ? "active" : "inactive") . "\n"); ## -> watcher_a: inactive
+    print("watcher_b: " . ($watcher_b->active ? "active" : "inactive") . "\n"); ## -> watcher_b: inactive
+
 
 
 =head2 Real-time Web: Comet (long-polling) and WebSocket
