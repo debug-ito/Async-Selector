@@ -64,7 +64,7 @@ sub active {
     return defined($self->{selector});
 }
 
-our $VERSION = '1.011';
+our $VERSION = '1.02';
 
 1;
 
@@ -76,7 +76,7 @@ Async::Selector::Watcher - representation of resource watch in Async::Selector
 
 =head1 VERSION
 
-1.011
+1.02
 
 =head1 SYNOPSIS
 
