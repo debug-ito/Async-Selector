@@ -50,6 +50,7 @@ checkCount(1,0);
     my $w = $s->watch(a => 1, sub {});
     checkCount(0,0);
     memory_cycle_ok($s, "no cyclic ref in selector");
+    memory_cycle_ok($w, 'no cyclic ref in watcher');
     $w->cancel();
     checkCount(0,0);
 }
@@ -73,9 +74,11 @@ checkCount(1,1);
         checkCount(0,0);
         ok($w->active, "w is active");
         memory_cycle_ok($s, "no cyclic ref in selector");
+        memory_cycle_ok($w, 'no cyclic ref in watcher');
     }
     checkCount(1,0);
     ok(!$w->active, "w is inactive because selector is destroyed");
+    memory_cycle_ok($w, 'no cyclic ref in watcher');
 }
 checkCount(1,1);
 
@@ -88,6 +91,8 @@ checkCount(1,1);
         my $x = $s->watch(a => 1, sub {});
         checkCount(0,0);
         memory_cycle_ok($s, "no cyclic ref in selector");
+        memory_cycle_ok($w, 'no cyclic ref in watcher $w');
+        memory_cycle_ok($x, 'no cyclic ref in watcher $x');
     }
     checkCount(1,1);
     ok(!$w->active, "w is inactive because selector is destroyed");
@@ -102,6 +107,7 @@ checkCount(1,2);
         undef $w;
     });
     memory_cycle_ok($w, 'there is no cyclic ref even when $w is included in the callback');
+    memory_cycle_ok($s, 'there is no cyclic ref on $s');
     $w->cancel();
     memory_cycle_ok($w, 'there is no cyclic ref on $w after $w->cancel().');
     memory_cycle_ok($s, 'there is no cyclic ref on $s after $w->cancel().');
@@ -114,6 +120,7 @@ checkCount(1,1);
     my $w;
     $w = $s->watch(a => 1, sub { undef $w });
     memory_cycle_ok($w, 'there is no cyclic ref even when $w is included in the callback');
+    memory_cycle_ok($s, 'there is no cyclic ref on $s');
     $s->cancel($w);
     memory_cycle_ok($w, 'there is no cyclic ref on $w after $s->cancel($w).');
     memory_cycle_ok($s, 'there is no cyclic ref on $s after $s->cancel($w).');
