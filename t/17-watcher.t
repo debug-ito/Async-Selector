@@ -80,20 +80,6 @@ sub testConditions {
 }
 
 {
-    note('--- call() method.');
-    my $s = Async::Selector->new();
-    my @result = ();
-    my $w; $w = $s->watch(sub {
-        my ($warg, @args) = @_;
-        is($warg, $w, '$warg is $w itself');
-        push(@result, @args);
-    });
-    is(int(@result), 0, 'result empty');
-    $w->call(1, 2, 3, 4);
-    is_deeply(\@result, [1, 2, 3, 4], 'result filled.');
-}
-
-{
     note('--- cancel() multiple times on the same Watcher.');
     my $s = Async::Selector->new();
     my $w = $s->watch(a => 10, sub {

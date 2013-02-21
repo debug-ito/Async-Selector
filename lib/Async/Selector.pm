@@ -17,11 +17,11 @@ Async::Selector - level-triggered resource observer like select(2)
 
 =head1 VERSION
 
-1.02
+1.03
 
 =cut
 
-our $VERSION = "1.02";
+our $VERSION = "1.03";
 
 
 =pod
@@ -128,8 +128,9 @@ sub _check {
    my ($self, $watcher_id_or_watcher, @triggers) = @_;
    my %results = ();
    my $fired = 0;
-   my $watcher = $self->{watchers}{"$watcher_id_or_watcher"};
-   return 0 if !defined($watcher);
+   my $watcher_entry = $self->{watchers}{"$watcher_id_or_watcher"};
+   return 0 if not defined($watcher_entry);
+   my $watcher = $watcher_entry->{object};
    my %conditions = $watcher->conditions;
    if($watcher->getCheckAll) {
        @triggers = $watcher->resources;
@@ -146,7 +147,7 @@ sub _check {
        }
    }
    return 0 if !$fired;
-   $watcher->call(%results);
+   $watcher_entry->{callback}->($watcher, %results);
    return 1;
 }
 
@@ -283,13 +284,16 @@ sub watch_et {
     %conditions = @_;
     if(!%conditions) {
         return Async::Selector::Watcher->new(
-            undef, \%conditions, $cb
+            undef, \%conditions
         );
     }
     my $watcher = Async::Selector::Watcher->new(
-        $self, \%conditions, $cb
+        $self, \%conditions
     );
-    $self->{watchers}{"$watcher"} = $watcher;
+    $self->{watchers}{"$watcher"} = {
+        object => $watcher,
+        callback => $cb
+    };
     return $watcher;
 }
 
@@ -339,7 +343,7 @@ sub cancel {
     my ($self, @watchers) = @_;
     foreach my $w (grep { defined($_) } @watchers) {
         next if not exists $self->{watchers}{"$w"};
-        $self->{watchers}{"$w"}->detach();
+        $self->{watchers}{"$w"}{object}->detach();
         delete $self->{watchers}{"$w"};
     }
     return $self;
@@ -420,11 +424,12 @@ try filtering the result (C<@watchers>) with L<Async::Selector::Watcher>'s C<res
 
 sub watchers {
     my ($self, @resources) = @_;
+    my @all_watchers = map { $_->{object} } values %{$self->{watchers}};
     if(!@resources) {
-        return values %{$self->{watchers}};
+        return @all_watchers;
     }
     my @affected_watchers = ();
-  watcher_loop: foreach my $watcher (values %{$self->{watchers}}) {
+  watcher_loop: foreach my $watcher (@all_watchers) {
         my %watch_conditions = $watcher->conditions;
         foreach my $res (@resources) {
             next if !defined($res);

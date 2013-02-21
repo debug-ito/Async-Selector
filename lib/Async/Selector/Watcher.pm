@@ -5,23 +5,14 @@ use Scalar::Util qw(weaken);
 use Carp;
 
 sub new {
-    my ($class, $selector, $conditions, $cb) = @_;
+    my ($class, $selector, $conditions) = @_;
     my $self = bless {
         selector => $selector,
         conditions => $conditions,
-        cb => $cb,
         check_all => 0,
     }, $class;
     weaken($self->{selector});
     return $self;
-}
-
-sub call {
-    my ($self) = @_;
-    if(not defined($self->{cb})) {
-        confess("call() method is called but cb is undef. Maybe the watcher is unexpectedly cancelled.")
-    }
-    return $self->{cb}->(@_);
 }
 
 sub detach {
@@ -45,7 +36,6 @@ sub cancel {
     my $selector = $self->{selector};
     $self->detach();
     $selector->cancel($self);
-    $self->{cb} = undef;
     return $self;
 }
 
@@ -64,7 +54,7 @@ sub active {
     return defined($self->{selector});
 }
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 1;
 
@@ -76,7 +66,7 @@ Async::Selector::Watcher - representation of resource watch in Async::Selector
 
 =head1 VERSION
 
-1.02
+1.03
 
 =head1 SYNOPSIS
 

@@ -91,6 +91,7 @@ test_active_nums({a => 0, b => 0, c => 0}, 'initial watch');
     set(b => 3);
     is_deeply(\@results, [{b => 3}], 'b fired.');
     ok($agg->active, "agg is still active.");
+    memory_cycle_ok($agg, 'no cyclic refs in agg even if agg is active');
 
     @results = ();
     set(a => 3);
@@ -124,6 +125,7 @@ test_active_nums({a => 0, b => 0, c => 0}, 'initial watch');
     set(b => 5);
     is_deeply(\@results, [{b => 5}], 'results OK');
     ok($agg->active, 'agg is still active');
+    memory_cycle_ok($agg, 'no cyclic refs in agg even if agg is active');
 
     @results = ();
     set(c => 3);
@@ -186,6 +188,7 @@ test_active_nums({a => 0, b => 0, c => 0}, 'initial watch');
         push(@results, \%res);
     });
     ok($agg->active, 'agg is active');
+    memory_cycle_ok($agg, 'no cyclic refs in agg even if agg is active');
     test_active_nums({a => 1, b => 1, c => 1}, '1 active watcher in a,b,c');
     is(scalar(@results), 3, '3 results');
     {
@@ -204,6 +207,7 @@ test_active_nums({a => 0, b => 0, c => 0}, 'initial watch');
     set(b => 10);
     is_deeply(\@results, [{b => 10}], 'got b = 10');
     ok($agg->active, 'agg is active');
+    memory_cycle_ok($agg, 'no cyclic refs in agg even if agg is active');
 
     @results = ();
     $agg->cancel();
