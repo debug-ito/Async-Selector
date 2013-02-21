@@ -101,7 +101,7 @@ checkCount(1,2);
     $w = $s->watch(a => 1, sub {
         undef $w;
     });
-    memory_cycle_exists($w, "cyclic ref because of the closure");
+    memory_cycle_ok($w, 'there is no cyclic ref even when $w is included in the callback');
     $w->cancel();
     memory_cycle_ok($w, 'there is no cyclic ref on $w after $w->cancel().');
     memory_cycle_ok($s, 'there is no cyclic ref on $s after $w->cancel().');
@@ -113,6 +113,7 @@ checkCount(1,1);
     my $s = Async::Selector->new();
     my $w;
     $w = $s->watch(a => 1, sub { undef $w });
+    memory_cycle_ok($w, 'there is no cyclic ref even when $w is included in the callback');
     $s->cancel($w);
     memory_cycle_ok($w, 'there is no cyclic ref on $w after $s->cancel($w).');
     memory_cycle_ok($s, 'there is no cyclic ref on $s after $s->cancel($w).');
