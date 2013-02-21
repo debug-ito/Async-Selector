@@ -103,7 +103,19 @@ checkCount(1,2);
     });
     memory_cycle_exists($w, "cyclic ref because of the closure");
     $w->cancel();
-    memory_cycle_ok($w, "there is no cyclic ref because cancel() releases the closure");
+    memory_cycle_ok($w, 'there is no cyclic ref on $w after $w->cancel().');
+    memory_cycle_ok($s, 'there is no cyclic ref on $s after $w->cancel().');
+}
+checkCount(1,1);
+
+{
+    resetCount();
+    my $s = Async::Selector->new();
+    my $w;
+    $w = $s->watch(a => 1, sub { undef $w });
+    $s->cancel($w);
+    memory_cycle_ok($w, 'there is no cyclic ref on $w after $s->cancel($w).');
+    memory_cycle_ok($s, 'there is no cyclic ref on $s after $s->cancel($w).');
 }
 checkCount(1,1);
 
