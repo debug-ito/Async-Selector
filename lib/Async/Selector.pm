@@ -132,7 +132,7 @@ sub _check {
    return 0 if not defined($watcher_entry);
    my $watcher = $watcher_entry->{object};
    my %conditions = $watcher->conditions;
-   if($watcher->getCheckAll) {
+   if($watcher->get_check_all) {
        @triggers = $watcher->resources;
    }
    foreach my $res_key (@triggers) {
@@ -184,7 +184,7 @@ sub register {
    my ($self, %providers) = @_;
    my @error_keys = ();
    while(my ($key, $provider) = each(%providers)) {
-       if(!_isaCoderef($provider)) {
+       if(!_isa_coderef($provider)) {
            push(@error_keys, $key);
        }
    }
@@ -269,7 +269,7 @@ resources that are watched and available.
 
 =cut
 
-sub _isaCoderef {
+sub _isa_coderef {
     my ($coderef) = @_;
     return (defined($coderef) && defined(ref($coderef)) && ref($coderef) eq "CODE");
 }
@@ -278,7 +278,7 @@ sub watch_et {
     my $self = shift;
     my (%conditions, $cb);
     $cb = pop;
-    if(!_isaCoderef($cb)) {
+    if(!_isa_coderef($cb)) {
         croak "the watch callback must be a coderef.";
     }
     %conditions = @_;
@@ -310,7 +310,7 @@ sub watch_lt {
 
 sub _wrapSelect {
     my ($self, $method, $cb, %conditions) = @_;
-    if(!_isaCoderef($cb)) {
+    if(!_isa_coderef($cb)) {
         croak "the select callback must be a coderef.";
     }
     my $wrapped_cb = sub {
@@ -323,7 +323,7 @@ sub _wrapSelect {
         }
     };
     my $watcher = $self->$method(%conditions, $wrapped_cb);
-    $watcher->setCheckAll(1);
+    $watcher->set_check_all(1);
     return $watcher->active ? "$watcher" : undef;
 }
 

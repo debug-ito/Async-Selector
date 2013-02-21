@@ -20,12 +20,12 @@ sub detach {
     $self->{selector} = undef;
 }
 
-sub getCheckAll {
+sub get_check_all {
     my ($self) = @_;
     return $self->{check_all};
 }
 
-sub setCheckAll {
+sub set_check_all {
     my ($self, $check_all) = @_;
     $self->{check_all} = $check_all;
 }
