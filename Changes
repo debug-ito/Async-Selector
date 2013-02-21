@@ -1,5 +1,18 @@
 Revision history for Async-Selector
 
+1.03    2013/02/21
+        Now watchers are free of cyclic refs even if they are included in
+        their watcher callback closures. This is because watcher callbacks
+        are now kept in Selector object along with the watchers.
+
+        Now that a watcher does not have the callback, call() method
+        is removed from Watcher. call() is public but undocumented, so
+        users should not be using it.
+
+        Change some private method names from camelCase to snake_case.
+        Documented methods are not changed.
+
+
 1.02    2013/02/11
         Add Async::Selector::Aggregator module.
         This module aggregates multiple watchers and treats them
